@@ -1,3 +1,15 @@
+import { getStampLabel, type Stamp } from "@/types/stamp";
+
+const exampleStamp: Stamp = {
+  id: "stamp-001",
+  name: "Penny Black",
+  country: "Great Britain",
+  year: 1840,
+  description: "The world's first adhesive postage stamp.",
+};
+
+const stampLabel = getStampLabel(exampleStamp);
+
 export default function HomePage() {
   // Our first Stamp Collection Manager homepage
   const appName: string = "Stamp Collection Manager";
@@ -27,6 +39,17 @@ export default function HomePage() {
             Your stamp catalogue is coming soon.
           </p>
         </div>
+        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">
+            Example Catalogue Entry
+          </h2>
+
+          <p className="mt-3 text-slate-700">{stampLabel}</p>
+
+          <p className="mt-2 text-sm text-slate-500">
+            {exampleStamp.description}
+          </p>
+        </section>
       </div>
     </main>
   );
