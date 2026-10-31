@@ -10,8 +10,6 @@ export interface Stamp {
   name: string;
   country: string;
   year: number;
-
-  // Optional descriptive information
   description?: string;
 }
 
