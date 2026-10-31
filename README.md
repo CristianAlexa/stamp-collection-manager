@@ -89,3 +89,6 @@ mobile application are planned for later phase.
 
 Developed as a full-stack software engineering
 learning and portfolio project.
+
+See [Development Setup](docs/development-setup.md)
+for local installation instructions

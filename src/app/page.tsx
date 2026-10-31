@@ -1,4 +1,7 @@
 import { getStampLabel, type Stamp } from "@/types/stamp";
+import { AppBrand } from "@/components/app-brand";
+
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Stamp Collection Manager";
 
 const exampleStamp: Stamp = {
   id: "stamp-001",
@@ -12,7 +15,6 @@ const stampLabel = getStampLabel(exampleStamp);
 
 export default function HomePage() {
   // Our first Stamp Collection Manager homepage
-  const appName: string = "Stamp Collection Manager";
 
   const description: string =
     "Organise your stamps, albums and catalogue references.";
@@ -24,9 +26,10 @@ export default function HomePage() {
           Personal-first · Multi-user-ready
         </p>
 
-        <h1 className="text-4xl font-bold text-slate-900">
-          {appName} by Cristian
-        </h1>
+        <AppBrand
+          name={appName}
+          subtitle="Organise your stamps, albums and cataloque references"
+        />
 
         <p className="mt-4 text-lg text-slate-600">{description}</p>
 
