@@ -21,7 +21,7 @@ const navigationItem: NavigationItem[] = [
 
 export function AppNavigation() {
   return (
-    <nav atia-label="Main navigation">
+    <nav aria-label="Main navigation">
       <div className="flex flex-wrap gap-2">
         {navigationItem.map((item) => (
           <Link
