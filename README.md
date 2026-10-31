@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stamp Collection Manager
+
+A personal-first, multi-user-ready stamp collection
+management application build with Next.js and TypeScript.
+
+## Project Overview
+
+Stamp Collection Manager helps collectors organise
+stamp catalogues, variations, owned stamps and albums.
+
+The application is being developed as a full-stack
+learning and portfolio project.
+
+## Planed Features
+
+- Stamp catalogue with country and year information
+- Multiple catalogue references (SG, Scott, Michel, etc.)
+- Stamp variations and plate numbers
+- Personal collection and duplicate tracking
+- Albums and nested sub-albums
+- Multiple stamp images
+- CSV import and export
+- Advanced search and filtering
+- Printable album page designer
+- Responsive and installable PWA
+
+## Technology Stack
+
+- Nest.js (App Router)
+- React
+- TypeScript
+- Tailwind CSS
+- PostgreSQL (planned)
+- Prisma ORM (planned)
+- Docker
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js compatible with installed Next.js version
+- npm
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Clone the repository and install dependencies:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    npm install
 
-## Learn More
+Start the development server:
 
-To learn more about Next.js, take a look at the following resources:
+    npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open https:localhost:300 in your browser.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Code Quality
 
-## Deploy on Vercel
+Run TypeScript checks:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    npx tsc --noEmit
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run ESLint:
+
+    npm run lint
+
+Checking formatting:
+
+    npx prettier --check .
+
+## Architecture
+
+The application separates catalogue stamp records
+from physical stamps owned by collectors.
+
+User-owned data will be associated with an account,
+allowing future multi-user support.
+
+## Development status
+
+Early development - Foundation phase.
+
+## Roadmap
+
+The initial release focuses on personal collection
+management. Public registration, hosting and native
+mobile application are planned for later phase.
+
+## Author
+
+Developed as a full-stack software engineering
+learning and portfolio project.
