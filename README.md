@@ -1,7 +1,7 @@
 # Stamp Collection Manager
 
 A personal-first, multi-user-ready stamp collection
-management application build with Next.js and TypeScript.
+management application built with Next.js and TypeScript.
 
 ## Project Overview
 
@@ -11,7 +11,7 @@ stamp catalogues, variations, owned stamps and albums.
 The application is being developed as a full-stack
 learning and portfolio project.
 
-## Planed Features
+## Planned Features
 
 - Stamp catalogue with country and year information
 - Multiple catalogue references (SG, Scott, Michel, etc.)
@@ -26,7 +26,7 @@ learning and portfolio project.
 
 ## Technology Stack
 
-- Nest.js (App Router)
+- Next.js (App Router)
 - React
 - TypeScript
 - Tailwind CSS
@@ -51,7 +51,7 @@ Start the development server:
 
     npm run dev
 
-Open https:localhost:300 in your browser.
+Open http://localhost:3000 in your browser.
 
 ### Code Quality
 
