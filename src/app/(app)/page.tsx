@@ -47,9 +47,9 @@ export default function HomePage() {
             Example Catalogue Entry
           </h2>
 
-          <p className="mt-3 text-slate-700">{stampLabel}</p>
+          <p className="mt-3 text-app-foreground">{stampLabel}</p>
 
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-app-muted">
             {exampleStamp.description}
           </p>
         </section>
