@@ -1,38 +1,58 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface NavigationItem {
   label: string;
   href: string;
 }
 
-const navigationItem: NavigationItem[] = [
+// Application navigation links
+const navigationItems: NavigationItem[] = [
   { label: "Home", href: "/" },
   { label: "Catalogue", href: "/catalogue" },
   { label: "My Collection", href: "/collection" },
   { label: "Albums", href: "/albums" },
 ];
 
-/**
- * Shared application navigation.
- *
- * Next.js Link enables client-side navigation
- * between internal application routes.
- */
-
 export function AppNavigation() {
+  // Get the current URL pathname
+  const pathname = usePathname();
+
   return (
     <nav aria-label="Main navigation">
-      <div className="flex flex-wrap gap-2">
-        {navigationItem.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700
-            transition-colors hover:bg-slate-100 hover:text-blue-700"
-          >
-            {item.label}
-          </Link>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        {navigationItems.map((item) => {
+          // Determine whether the link is active.
+          // Also supports nested routes like /catalogue/123.
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/" && pathname.startsWith(`${item.href}/`));
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              className={`
+                rounded-lg px-4 py-2
+                text-sm font-medium
+                transition-colors duration-200
+                focus-visible:outline-2
+                focus-visible:outline-offset-2
+                focus-visible:outline-blue-500
+                ${
+                  isActive
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-app-foreground hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400"
+                }
+              `}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );

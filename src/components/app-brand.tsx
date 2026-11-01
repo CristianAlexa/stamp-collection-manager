@@ -13,9 +13,9 @@ interface AppBrandProps {
 export function AppBrand({ name, subtitle }: AppBrandProps) {
   return (
     <div>
-      <h1 className="text-4xl font-bold text-slate-900">{name}</h1>
+      <h1 className="text-4xl font-bold text-app-foreground">{name}</h1>
 
-      {subtitle && <p className="mt-3 text-lg text-slate-600">{subtitle}</p>}
+      {subtitle && <p className="mt-3 text-lg text-app-muted">{subtitle}</p>}
     </div>
   );
 }
