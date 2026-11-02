@@ -1,5 +1,6 @@
 import { getStampLabel, type Stamp } from "@/types/stamp";
 import { AppBrand } from "@/components/app-brand";
+import { Button } from "@/components/ui/button";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Stamp Collection Manager";
 
@@ -32,6 +33,13 @@ export default function HomePage() {
         />
 
         <p className="mt-4 text-lg text-app-muted">{description}</p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button>View Collection</Button>
+
+          <Button variant="outline">Browse Catalogue</Button>
+
+          <Button variant="secondary">Manage Albums</Button>
+        </div>
 
         <div className="mt-10 rounded-xl border border-app-border bg-app-surface p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-app-foreground">
