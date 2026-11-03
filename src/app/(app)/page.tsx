@@ -1,5 +1,7 @@
 import { getStampLabel, type Stamp } from "@/types/stamp";
 import { AppBrand } from "@/components/app-brand";
+import { Button } from "@/components/ui/button";
+import { CollectionCard } from "@/components/collection-card";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Stamp Collection Manager";
 
@@ -32,6 +34,43 @@ export default function HomePage() {
         />
 
         <p className="mt-4 text-lg text-app-muted">{description}</p>
+        <section aria-labelledby="collection-overview-heading">
+          <div className="mb-4 space-y-1">
+            <h2
+              id="collection-overview-heading"
+              className="text-xl font-semibold"
+            >
+              Collection overview
+            </h2>
+
+            <p className="text-sm text-muted-foreground">
+              Sample data while we build the collection features.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <CollectionCard
+              title="Albums"
+              description="Organise your stamps into albums."
+              stampCount={24}
+              href="/albums"
+            />
+
+            <CollectionCard
+              title="Catalogue"
+              description="Explore your stamp catalogue."
+              stampCount={48}
+              href="/catalogue"
+            />
+          </div>
+        </section>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button>View Collection</Button>
+
+          <Button variant="outline">Browse Catalogue</Button>
+
+          <Button variant="secondary">Manage Albums</Button>
+        </div>
 
         <div className="mt-10 rounded-xl border border-app-border bg-app-surface p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-app-foreground">

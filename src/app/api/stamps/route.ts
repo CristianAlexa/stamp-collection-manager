@@ -1,24 +1,41 @@
+import { filterStamps } from "@/lib/filter-stamps";
 import { stamps } from "@/lib/stamp-data";
+import type { ApiListResponse, ApiErrorResponse } from "@/types/api";
+import type { Stamp } from "@/types/stamp";
+import { stampYearSchema } from "@/lib/stamp-query-schema";
 
-/**
- * GET /api/stamps
- *
- * Optional country filter:
- * /api/stamps?country=France
- */
 export function GET(request: Request) {
   const url = new URL(request.url);
 
-  // Normalise the input only once.
-  const country = url.searchParams.get("country")?.trim().toLowerCase();
+  const query = url.searchParams.get("query") ?? "";
+  const country = url.searchParams.get("country") ?? "";
+  const rawYear = url.searchParams.get("year")?.trim();
 
-  // Apply the filter when a non-empty value exists.
-  const filteredStamps = country
-    ? stamps.filter((stamp) => stamp.country.toLowerCase() === country)
-    : stamps;
+  const yearResult = stampYearSchema.safeParse(rawYear || undefined);
 
-  return Response.json({
+  if (!yearResult.success) {
+    const response: ApiErrorResponse = {
+      error: {
+        code: "INVALIDID_YEAR",
+        message: "Enter a valid stamp year",
+      },
+    };
+
+    return Response.json(response, { status: 400 });
+  }
+
+  const year = yearResult.data;
+
+  const filteredStamps = filterStamps(stamps, {
+    query,
+    country,
+    year,
+  });
+
+  const response: ApiListResponse<Stamp> = {
     data: filteredStamps,
     count: filteredStamps.length,
-  });
+  };
+
+  return Response.json(response);
 }
