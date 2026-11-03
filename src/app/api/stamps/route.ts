@@ -1,5 +1,7 @@
 import { filterStamps } from "@/lib/filter-stamps";
 import { stamps } from "@/lib/stamp-data";
+import type { ApiListResponse } from "@/types/api";
+import type { Stamp } from "@/types/stamp";
 
 export function GET(request: Request) {
   const url = new URL(request.url);
@@ -29,8 +31,10 @@ export function GET(request: Request) {
     year,
   });
 
-  return Response.json({
+  const response: ApiListResponse<Stamp> = {
     data: filteredStamps,
     count: filteredStamps.length,
-  });
+  };
+
+  return Response.json(response);
 }
