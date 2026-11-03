@@ -2,28 +2,25 @@ import { filterStamps } from "@/lib/filter-stamps";
 import { stamps } from "@/lib/stamp-data";
 import type { ApiListResponse } from "@/types/api";
 import type { Stamp } from "@/types/stamp";
+import { stampYearSchema } from "@/lib/stamp-query-schema";
 
 export function GET(request: Request) {
   const url = new URL(request.url);
 
   const query = url.searchParams.get("query") ?? "";
   const country = url.searchParams.get("country") ?? "";
-  const yearText = url.searchParams.get("year")?.trim() ?? "";
+  const rawYear = url.searchParams.get("year")?.trim();
 
-  let year: number | undefined;
+  const yearResult = stampYearSchema.safeParse(rawYear || undefined);
 
-  if (yearText !== "") {
-    const parsedYear = Number(yearText);
-
-    if (!Number.isInteger(parsedYear) || parsedYear < 1) {
-      return Response.json(
-        { error: "Year must be a positive whole number." },
-        { status: 400 },
-      );
-    }
-
-    year = parsedYear;
+  if (!yearResult.success) {
+    return Response.json(
+      { error: "Year must be a four-digit number." },
+      { status: 400 },
+    );
   }
+
+  const year = yearResult.data;
 
   const filteredStamps = filterStamps(stamps, {
     query,
