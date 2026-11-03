@@ -1,0 +1,12 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: stamp_app
+      POSTGRES_PASSWORD: stamp_dev_only
+      POSTGRES_DB: stamp_collection
+    volumes:
+      - stamp_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  stamp_postgres_data:
