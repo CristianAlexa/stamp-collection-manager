@@ -1,6 +1,6 @@
 import { filterStamps } from "@/lib/filter-stamps";
 import { stamps } from "@/lib/stamp-data";
-import type { ApiListResponse } from "@/types/api";
+import type { ApiListResponse, ApiErrorResponse } from "@/types/api";
 import type { Stamp } from "@/types/stamp";
 import { stampYearSchema } from "@/lib/stamp-query-schema";
 
@@ -14,10 +14,14 @@ export function GET(request: Request) {
   const yearResult = stampYearSchema.safeParse(rawYear || undefined);
 
   if (!yearResult.success) {
-    return Response.json(
-      { error: "Year must be a four-digit number." },
-      { status: 400 },
-    );
+    const response: ApiErrorResponse = {
+      error: {
+        code: "INVALIDID_YEAR",
+        message: "Enter a valid stamp year",
+      },
+    };
+
+    return Response.json(response, { status: 400 });
   }
 
   const year = yearResult.data;
