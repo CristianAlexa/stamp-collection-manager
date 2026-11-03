@@ -1,21 +1,33 @@
+import { filterStamps } from "@/lib/filter-stamps";
 import { stamps } from "@/lib/stamp-data";
 
-/**
- * GET /api/stamps
- *
- * Optional country filter:
- * /api/stamps?country=France
- */
 export function GET(request: Request) {
   const url = new URL(request.url);
 
-  // Normalise the input only once.
-  const country = url.searchParams.get("country")?.trim().toLowerCase();
+  const query = url.searchParams.get("query") ?? "";
+  const country = url.searchParams.get("country") ?? "";
+  const yearText = url.searchParams.get("year")?.trim() ?? "";
 
-  // Apply the filter when a non-empty value exists.
-  const filteredStamps = country
-    ? stamps.filter((stamp) => stamp.country.toLowerCase() === country)
-    : stamps;
+  let year: number | undefined;
+
+  if (yearText !== "") {
+    const parsedYear = Number(yearText);
+
+    if (!Number.isInteger(parsedYear) || parsedYear < 1) {
+      return Response.json(
+        { error: "Year must be a positive whole number." },
+        { status: 400 },
+      );
+    }
+
+    year = parsedYear;
+  }
+
+  const filteredStamps = filterStamps(stamps, {
+    query,
+    country,
+    year,
+  });
 
   return Response.json({
     data: filteredStamps,
