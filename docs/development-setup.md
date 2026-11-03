@@ -27,5 +27,17 @@ Run the following checks:
 
 ## Database
 
-PostgreSQL and Prisma will be introduced
-during the database development phase.
+Start the local PostgreSQL service from the repository root:
+
+```powershell
+docker compose up -d db
+docker compose ps db
+docker compose exec db psql -U stamp_app -d stamp_collection
+```
+
+At the `psql` prompt, run `\conninfo` to verify the database and user.
+Run `\q` to return to your shell.
+
+The Compose service uses development-only credentials and publishes no
+host port. PostgreSQL data is stored in a named Docker volume. Prisma
+integration is planned for a later phase.
