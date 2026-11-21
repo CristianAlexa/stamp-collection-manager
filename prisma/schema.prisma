@@ -11,3 +11,14 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// Shared catalogue information used by all collectors.
+model Stamp {
+  id          String   @id @default(cuid())
+  name        String
+  country     String
+  year        Int
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
