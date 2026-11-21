@@ -1,10 +1,12 @@
 import { filterStamps } from "@/lib/filter-stamps";
-import { stamps } from "@/lib/stamp-data";
-import type { ApiListResponse, ApiErrorResponse } from "@/types/api";
-import type { Stamp } from "@/types/stamp";
+import { prisma } from "@/lib/prisma";
 import { stampYearSchema } from "@/lib/stamp-query-schema";
+import type { ApiErrorResponse, ApiListResponse } from "@/types/api";
+import type { Stamp } from "@/types/stamp";
 
-export function GET(request: Request) {
+export const runtime = "nodejs";
+
+export async function GET(request: Request) {
   const url = new URL(request.url);
 
   const query = url.searchParams.get("query") ?? "";
@@ -24,18 +26,55 @@ export function GET(request: Request) {
     return Response.json(response, { status: 400 });
   }
 
-  const year = yearResult.data;
+  try {
+    const records = await prisma.stamp.findMany({
+      select: {
+        id: true,
+        name: true,
+        country: true,
+        year: true,
+        description: true,
+      },
+      orderBy: [
+        { year: "asc" },
+        { id: "asc" },
+      ],
+    });
 
-  const filteredStamps = filterStamps(stamps, {
-    query,
-    country,
-    year,
-  });
+    // PostgreSQL permits NULL, while our API type uses an optional string.
+    const stamps: Stamp[] = records.map((record) => ({
+      id: record.id,
+      name: record.name,
+      country: record.country,
+      year: record.year,
+      ...(record.description === null
+        ? {}
+        : { description: record.description }),
+    }));
 
-  const response: ApiListResponse<Stamp> = {
-    data: filteredStamps,
-    count: filteredStamps.length,
-  };
+    const filteredStamps = filterStamps(stamps, {
+      query,
+      country,
+      year: yearResult.data,
+    });
 
-  return Response.json(response);
+    const response: ApiListResponse<Stamp> = {
+      data: filteredStamps,
+      count: filteredStamps.length,
+    };
+
+    return Response.json(response);
+  } catch (error: unknown) {
+    // Detailed errors stay in the server terminal.
+    console.error("Could not load stamps from PostgreSQL.", error);
+
+    const response: ApiErrorResponse = {
+      error: {
+        code: "DATABASE_ERROR",
+        message: "Could not load the stamp catalogue. Try again later.",
+      },
+    };
+
+    return Response.json(response, { status: 500 });
+  }
 }
