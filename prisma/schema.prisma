@@ -12,13 +12,42 @@ datasource db {
   provider = "postgresql"
 }
 
+// Represents an individual collector.
+// Personal collections and albums will belong to a user.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Represents a stamp-issuing country or territory.
+model Country {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String?  @unique
+  stamps    Stamp[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Shared catalogue information used by all collectors.
 model Stamp {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  country     String
   year        Int
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  // Foreign key referencing the Country table.
+  countryId String
+
+  // Prisma relation to the issuing country.
+  country Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Index to improve country-based queries.
+  @@index([countryId])
 }

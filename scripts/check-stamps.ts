@@ -19,7 +19,11 @@ async function main() {
     select: {
       id: true,
       name: true,
-      country: true,
+      country: {
+        select: {
+          name: true,
+        },
+      },
       year: true,
     },
     orderBy: [
@@ -29,7 +33,14 @@ async function main() {
   });
 
   console.log(`Found ${stamps.length} stamp records.`);
-  console.table(stamps);
+console.table(
+  stamps.map((stamp) => ({
+    id: stamp.id,
+    name: stamp.name,
+    country: stamp.country.name,
+    year: stamp.year,
+  })),
+);
 }
 
 main()

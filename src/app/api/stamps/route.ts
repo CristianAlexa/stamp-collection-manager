@@ -27,25 +27,29 @@ export async function GET(request: Request) {
   }
 
   try {
-    const records = await prisma.stamp.findMany({
+const records = await prisma.stamp.findMany({
+  select: {
+    id: true,
+    name: true,
+    country: {
       select: {
-        id: true,
         name: true,
-        country: true,
-        year: true,
-        description: true,
       },
-      orderBy: [
-        { year: "asc" },
-        { id: "asc" },
-      ],
-    });
+    },
+    year: true,
+    description: true,
+  },
+  orderBy: [
+    { year: "asc" },
+    { id: "asc" },
+  ],
+});
 
     // PostgreSQL permits NULL, while our API type uses an optional string.
     const stamps: Stamp[] = records.map((record) => ({
       id: record.id,
       name: record.name,
-      country: record.country,
+      country: record.country.name,
       year: record.year,
       ...(record.description === null
         ? {}
