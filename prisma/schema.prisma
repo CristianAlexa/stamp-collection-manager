@@ -43,12 +43,33 @@ enum StampStatus {
   CTO
 }
 
+// Describes the physical condition of an owned stamp.
+enum PhysicalGrade {
+  EXTRA_FINE
+  FINE
+  FAIR
+  POOR
+}
+
+// Identifies the purpose of a stamp photograph.
+enum StampImageType {
+  FRONT
+  BACK
+  DETAIL
+  WATERMARK
+  OTHER
+}
+
 // Represents an individual collector.
 // Personal collections and albums will belong to a user.
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String?
+
+  albums          Album[]
+  collectionItems CollectionItem[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -125,6 +146,9 @@ model Stamp {
   // Explicit stamp variations.
   variants StampVariant[]
 
+  collectionItems CollectionItem[]
+  images          CatalogueImage[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -184,8 +208,10 @@ model Currency {
   name   String
   symbol String?
 
-  stamps     Stamp[]
-  valuations CatalogueValuation[]
+  stamps            Stamp[]
+  valuations        CatalogueValuation[]
+  purchasedItems    CollectionItem[]     @relation("CollectionPurchaseCurrency")
+  marketValuedItems CollectionItem[]     @relation("CollectionMarketCurrency")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -356,9 +382,11 @@ model StampVariant {
   stampId String
   stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
 
-  attributes VariantAttribute[]
-  colours    VariantColour[]
-  valuations CatalogueValuation[]
+  attributes      VariantAttribute[]
+  colours         VariantColour[]
+  valuations      CatalogueValuation[]
+  collectionItems CollectionItem[]
+  images          CatalogueImage[]
 
   // Optional overrides of parent stamp characteristics.
   watermarkStatus      WatermarkStatus?
@@ -467,4 +495,145 @@ model CatalogueValuation {
   @@index([editionId, catalogueId])
   @@index([variantId, stampId])
   @@index([currencyId])
+}
+
+// Represents an album belonging to an individual collector.
+model Album {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  // Album ownership.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  items CollectionItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Album names must be unique per collector.
+  @@unique([userId, name])
+  // Supports ownership consistency for collection items.
+  @@unique([id, userId])
+}
+
+// Represents one physical stamp owned by a collector.
+model CollectionItem {
+  id String @id @default(cuid())
+
+  // Ownership.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // Shared catalogue entry.
+  stampId String
+  stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
+
+  // Optional specific stamp variation.
+  variantId String?
+  variant   StampVariant? @relation(fields: [variantId, stampId], references: [id, stampId], onDelete: Restrict)
+
+  // Optional album allocation.
+  // The album must belong to the same collector.
+  albumId String?
+  album   Album?  @relation(fields: [albumId, userId], references: [id, userId], onDelete: Restrict)
+
+  // Postal and physical condition.
+  status         StampStatus
+  physicalGrade  PhysicalGrade?
+  conditionNotes String?
+
+  // Optional acquisition information.
+  purchasePrice Decimal?  @db.Decimal(14, 2)
+  purchaseDate  DateTime? @db.Date
+
+  purchaseCurrencyId String?
+  purchaseCurrency   Currency? @relation("CollectionPurchaseCurrency", fields: [purchaseCurrencyId], references: [id], onDelete: Restrict)
+
+  // Optional personal market valuation.
+  estimatedMarketValue Decimal?  @db.Decimal(14, 2)
+  marketValueDate      DateTime? @db.Date
+
+  marketCurrencyId String?
+  marketCurrency   Currency? @relation("CollectionMarketCurrency", fields: [marketCurrencyId], references: [id], onDelete: Restrict)
+
+  // Collector's personal notes.
+  notes String?
+
+  images CollectionImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, albumId])
+  @@index([userId, stampId])
+  @@index([stampId])
+  @@index([variantId, stampId])
+  @@index([albumId, userId])
+  @@index([purchaseCurrencyId])
+  @@index([marketCurrencyId])
+}
+
+// Photograph of an individual collector's physical stamp.
+model CollectionImage {
+  id String @id @default(cuid())
+
+  collectionItemId String
+  collectionItem   CollectionItem @relation(fields: [collectionItemId], references: [id], onDelete: Cascade)
+
+  imageType StampImageType
+
+  // Storage identifier, independent of the storage provider.
+  storageKey String @unique
+
+  originalFileName String?
+  mimeType         String?
+  fileSizeBytes    Int?
+  widthPx          Int?
+  heightPx         Int?
+
+  caption   String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([collectionItemId, sortOrder])
+}
+
+// Shared reference image of a catalogue stamp or variation.
+model CatalogueImage {
+  id String @id @default(cuid())
+
+  stampId String
+  stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
+
+  // Optional variation-specific reference image.
+  variantId String?
+  variant   StampVariant? @relation(fields: [variantId, stampId], references: [id, stampId], onDelete: Restrict)
+
+  imageType StampImageType
+
+  storageKey String @unique
+
+  originalFileName String?
+  mimeType         String?
+  fileSizeBytes    Int?
+  widthPx          Int?
+  heightPx         Int?
+
+  // Optional attribution and licensing information.
+  sourceUrl String?
+  credit    String?
+  licence   String?
+
+  caption   String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stampId, sortOrder])
+  @@index([variantId, stampId])
 }
