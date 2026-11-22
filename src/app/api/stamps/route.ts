@@ -27,30 +27,68 @@ export async function GET(request: Request) {
   }
 
   try {
-    const records = await prisma.stamp.findMany({
+const records = await prisma.stamp.findMany({
+  select: {
+    id: true,
+    name: true,
+    country: {
       select: {
-        id: true,
         name: true,
-        country: true,
-        year: true,
-        description: true,
+        code: true,
       },
-      orderBy: [
-        { year: "asc" },
-        { id: "asc" },
-      ],
-    });
+    },
+    catalogueReferences: {
+      select: {
+        catalogueNumber: true,
+        catalogue: {
+          select: {
+            code: true,
+          },
+        },
+      },
+      orderBy: {
+        catalogue: {
+          code: "asc",
+        },
+      },
+    },
+    year: true,
+    description: true,
+  },
+  orderBy: [
+    { year: "asc" },
+    { id: "asc" },
+  ],
+});
 
     // PostgreSQL permits NULL, while our API type uses an optional string.
-    const stamps: Stamp[] = records.map((record) => ({
-      id: record.id,
-      name: record.name,
-      country: record.country,
-      year: record.year,
-      ...(record.description === null
-        ? {}
-        : { description: record.description }),
-    }));
+const stamps: Stamp[] = records.map((record) => {
+  // Build human-readable catalogue references.
+  const references = record.catalogueReferences.map(
+    (reference) =>
+      `${reference.catalogue.code}-${record.country.code ?? record.country.name}-${reference.catalogueNumber}`,
+  );
+
+  // Prefer Stanley Gibbons for unnamed stamps.
+  const preferredReference =
+    references.find((reference) =>
+      reference.startsWith("SG-"),
+    ) ?? references[0];
+
+  return {
+    id: record.id,
+    name:
+      record.name ??
+      preferredReference ??
+      "Unidentified stamp",
+    country: record.country.name,
+    year: record.year,
+    catalogueReferences: references,
+    ...(record.description === null
+      ? {}
+      : { description: record.description }),
+  };
+});
 
     const filteredStamps = filterStamps(stamps, {
       query,

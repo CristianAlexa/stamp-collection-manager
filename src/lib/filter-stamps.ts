@@ -15,13 +15,21 @@ export function filterStamps(
   const year = filters.year;
 
   return stamps.filter((stamp) => {
+    // Search by stamp name or catalogue reference.
     const matchesQuery =
-      query === "" || stamp.name.toLowerCase().includes(query);
+      query === "" ||
+      stamp.name.toLowerCase().includes(query) ||
+      (stamp.catalogueReferences ?? []).some(
+        (reference) =>
+          reference.toLowerCase().includes(query),
+      );
 
     const matchesCountry =
-      country === "" || stamp.country.toLowerCase() === country;
+      country === "" ||
+      stamp.country.toLowerCase() === country;
 
-    const matchesYear = year === undefined || stamp.year === year;
+    const matchesYear =
+      year === undefined || stamp.year === year;
 
     return matchesQuery && matchesCountry && matchesYear;
   });

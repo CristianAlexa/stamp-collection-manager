@@ -12,13 +12,628 @@ datasource db {
   provider = "postgresql"
 }
 
+enum WatermarkStatus {
+  NONE
+  PRESENT
+  UNKNOWN
+}
+
+enum WatermarkOrientation {
+  NORMAL
+  INVERTED
+  REVERSED
+  INVERTED_REVERSED
+  SIDEWAYS_LEFT
+  SIDEWAYS_RIGHT
+  UNKNOWN
+}
+
+enum PerforationType {
+  PERFORATED
+  IMPERFORATE
+  PARTIALLY_PERFORATED
+  UNKNOWN
+}
+
+// Describes the postal and gum status of a stamp.
+enum StampStatus {
+  MNH
+  MH
+  USED
+  CTO
+}
+
+// Describes the physical condition of an owned stamp.
+enum PhysicalGrade {
+  EXTRA_FINE
+  FINE
+  FAIR
+  POOR
+}
+
+// Identifies the purpose of a stamp photograph.
+enum StampImageType {
+  FRONT
+  BACK
+  DETAIL
+  WATERMARK
+  OTHER
+}
+
+// Represents an individual collector.
+// Personal collections and albums will belong to a user.
+model User {
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String?
+
+  albums          Album[]
+  collectionItems CollectionItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Represents a stamp-issuing country or territory.
+model Country {
+  id         String             @id @default(cuid())
+  name       String             @unique
+  code       String?            @unique
+  stamps     Stamp[]
+  watermarks WatermarkCountry[]
+  series     StampSeries[]
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+}
+
 // Shared catalogue information used by all collectors.
 model Stamp {
-  id          String   @id @default(cuid())
-  name        String
-  country     String
-  year        Int
+  id          String  @id @default(cuid())
+  name        String?
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  // Partial issue dates are supported.
+  // Year represents the mandatory issue year.
+  year       Int
+  issueMonth Int?
+  issueDay   Int?
+
+  // Issuing country.
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  // Printed denomination and numeric face value.
+  denomination String?
+  faceValue    Decimal? @db.Decimal(14, 6)
+
+  currencyId String?
+  currency   Currency? @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+
+  // Actual physical dimensions in millimetres.
+  widthMm  Decimal? @db.Decimal(7, 3)
+  heightMm Decimal? @db.Decimal(7, 3)
+
+  // International catalogue references.
+  catalogueReferences CatalogueReference[]
+
+  // Reusable colours.
+  colours StampColour[]
+
+  // Watermark information.
+  watermarkStatus      WatermarkStatus       @default(NONE)
+  watermarkOrientation WatermarkOrientation?
+
+  watermarkId String?
+  watermark   Watermark? @relation(fields: [watermarkId], references: [id], onDelete: Restrict)
+
+  // Perforation information.
+  perforationType PerforationType @default(UNKNOWN)
+
+  perforationId String?
+  perforation   Perforation? @relation(fields: [perforationId], references: [id], onDelete: Restrict)
+
+  // Stamp classification.
+  stampTypeId String?
+  stampType   StampType? @relation(fields: [stampTypeId], references: [id], onDelete: Restrict)
+
+  // Optional stamp series.
+  seriesId String?
+  series   StampSeries? @relation(fields: [seriesId], references: [id], onDelete: Restrict)
+
+  // Thematic classifications.
+  themes StampTheme[]
+
+  // Explicit stamp variations.
+  variants StampVariant[]
+
+  collectionItems CollectionItem[]
+  images          CatalogueImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Required for the compound foreign key.
+  @@unique([id, countryId])
+  @@index([countryId])
+  @@index([currencyId])
+  @@index([watermarkId])
+  @@index([perforationId])
+  @@index([stampTypeId])
+  @@index([seriesId])
+}
+
+// Represents an international stamp catalogue.
+model Catalogue {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String  @unique
+  description String?
+
+  references CatalogueReference[]
+  editions   CatalogueEdition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Identifies a stamp within a particular catalogue.
+model CatalogueReference {
+  id              String @id @default(cuid())
+  catalogueNumber String
+
+  catalogueId String
+  catalogue   Catalogue @relation(fields: [catalogueId], references: [id], onDelete: Restrict)
+
+  countryId String
+  stampId   String
+  stamp     Stamp  @relation(fields: [stampId, countryId], references: [id, countryId], onDelete: Restrict)
+
+  valuations CatalogueValuation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The complete catalogue reference must be unique.
+  @@unique([catalogueId, countryId, catalogueNumber])
+  // One reference per catalogue for a specific stamp.
+  @@unique([stampId, catalogueId])
+  @@unique([id, catalogueId, stampId])
+  @@index([stampId, countryId])
+}
+
+// Supports modern and historical currencies.
+model Currency {
+  id     String  @id @default(cuid())
+  code   String  @unique
+  name   String
+  symbol String?
+
+  stamps            Stamp[]
+  valuations        CatalogueValuation[]
+  purchasedItems    CollectionItem[]     @relation("CollectionPurchaseCurrency")
+  marketValuedItems CollectionItem[]     @relation("CollectionMarketCurrency")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Global library of reusable stamp colours.
+model Colour {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  hexCode     String?
+  description String?
+
+  stamps    StampColour[]
+  variants  VariantColour[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+// Connects stamps to one or more colours.
+model StampColour {
+  stampId  String
+  colourId String
+
+  stamp  Stamp  @relation(fields: [stampId], references: [id], onDelete: Cascade)
+  colour Colour @relation(fields: [colourId], references: [id], onDelete: Restrict)
+
+  @@id([stampId, colourId])
+  @@index([colourId])
+}
+
+// Reusable watermark design.
+model Watermark {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String?
+
+  countries WatermarkCountry[]
+  stamps    Stamp[]
+
+  variants StampVariant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+// Associates watermark designs with issuing countries.
+model WatermarkCountry {
+  watermarkId String
+  countryId   String
+
+  watermark Watermark @relation(fields: [watermarkId], references: [id], onDelete: Cascade)
+  country   Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@id([watermarkId, countryId])
+  @@index([countryId])
+}
+
+// Reusable perforation measurements.
+model Perforation {
+  id String @id @default(cuid())
+
+  // Human-readable identifier, e.g. "14 x 15".
+  name String @unique
+
+  horizontal Decimal? @db.Decimal(6, 3)
+  vertical   Decimal? @db.Decimal(6, 3)
+
+  description String?
+
+  stamps Stamp[]
+
+  variants StampVariant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Expandable classification of stamps.
+model StampType {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  stamps Stamp[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Groups related stamp issues.
+model StampSeries {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  stamps Stamp[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([countryId, name])
+}
+
+// Globally reusable thematic classifications.
+model Theme {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  stamps StampTheme[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Connects a stamp to multiple themes.
+model StampTheme {
+  stampId String
+  themeId String
+
+  stamp Stamp @relation(fields: [stampId], references: [id], onDelete: Cascade)
+  theme Theme @relation(fields: [themeId], references: [id], onDelete: Restrict)
+
+  @@id([stampId, themeId])
+  @@index([themeId])
+}
+
+// Defines a reusable variation characteristic.
+model VariationType {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  values VariationValue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Stores reusable values for a variation type.
+model VariationValue {
+  id    String @id @default(cuid())
+  value String
+
+  variationTypeId String
+  variationType   VariationType @relation(fields: [variationTypeId], references: [id], onDelete: Restrict)
+
+  attributes VariantAttribute[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([variationTypeId, value])
+}
+
+// Explicitly identified variation of a catalogue stamp.
+model StampVariant {
+  id          String  @id @default(cuid())
+  name        String?
+  description String?
+
+  stampId String
+  stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
+
+  attributes      VariantAttribute[]
+  colours         VariantColour[]
+  valuations      CatalogueValuation[]
+  collectionItems CollectionItem[]
+  images          CatalogueImage[]
+
+  // Optional overrides of parent stamp characteristics.
+  watermarkStatus      WatermarkStatus?
+  watermarkOrientation WatermarkOrientation?
+
+  watermarkId String?
+  watermark   Watermark? @relation(fields: [watermarkId], references: [id], onDelete: Restrict)
+
+  perforationType PerforationType?
+
+  perforationId String?
+  perforation   Perforation? @relation(fields: [perforationId], references: [id], onDelete: Restrict)
+
+  widthMm  Decimal? @db.Decimal(7, 3)
+  heightMm Decimal? @db.Decimal(7, 3)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([id, stampId])
+  @@index([stampId])
+}
+
+// Assigns reusable attribute values to a variation.
+model VariantAttribute {
+  variantId String
+  valueId   String
+
+  variant StampVariant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  value   VariationValue @relation(fields: [valueId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, valueId])
+  @@index([valueId])
+}
+
+// Defines colours specific to a stamp variation.
+model VariantColour {
+  variantId String
+  colourId  String
+
+  variant StampVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  colour  Colour       @relation(fields: [colourId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, colourId])
+  @@index([colourId])
+}
+
+// Represents a particular publication of a catalogue.
+model CatalogueEdition {
+  id String @id @default(cuid())
+
+  catalogueId String
+  catalogue   Catalogue @relation(fields: [catalogueId], references: [id], onDelete: Restrict)
+
+  // Publication information.
+  publicationYear Int
+  editionName     String
+  description     String?
+
+  valuations CatalogueValuation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Supports multiple editions within the same year.
+  @@unique([catalogueId, publicationYear, editionName])
+  // Required for catalogue consistency checks.
+  @@unique([id, catalogueId])
+}
+
+// Historical published value of a catalogue stamp.
+model CatalogueValuation {
+  id String @id @default(cuid())
+
+  // Identifies the catalogue reference and edition.
+  catalogueId          String
+  catalogueReferenceId String
+  editionId            String
+  stampId              String
+
+  catalogueReference CatalogueReference @relation(fields: [catalogueReferenceId, catalogueId, stampId], references: [id, catalogueId, stampId], onDelete: Restrict)
+
+  edition CatalogueEdition @relation(fields: [editionId, catalogueId], references: [id, catalogueId], onDelete: Restrict)
+
+  // Optional valuation for a specific stamp variation.
+  variantId String?
+  variant   StampVariant? @relation(fields: [variantId, stampId], references: [id, stampId], onDelete: Restrict)
+
+  // Published stamp status.
+  status StampStatus
+
+  // Monetary value and currency.
+  amount Decimal @db.Decimal(14, 2)
+
+  currencyId String
+  currency   Currency @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+
+  // Optional source information.
+  sourcePage String?
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([catalogueReferenceId, status])
+  @@index([editionId, catalogueId])
+  @@index([variantId, stampId])
+  @@index([currencyId])
+}
+
+// Represents an album belonging to an individual collector.
+model Album {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  // Album ownership.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  items CollectionItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Album names must be unique per collector.
+  @@unique([userId, name])
+  // Supports ownership consistency for collection items.
+  @@unique([id, userId])
+}
+
+// Represents one physical stamp owned by a collector.
+model CollectionItem {
+  id String @id @default(cuid())
+
+  // Ownership.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // Shared catalogue entry.
+  stampId String
+  stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
+
+  // Optional specific stamp variation.
+  variantId String?
+  variant   StampVariant? @relation(fields: [variantId, stampId], references: [id, stampId], onDelete: Restrict)
+
+  // Optional album allocation.
+  // The album must belong to the same collector.
+  albumId String?
+  album   Album?  @relation(fields: [albumId, userId], references: [id, userId], onDelete: Restrict)
+
+  // Postal and physical condition.
+  status         StampStatus
+  physicalGrade  PhysicalGrade?
+  conditionNotes String?
+
+  // Optional acquisition information.
+  purchasePrice Decimal?  @db.Decimal(14, 2)
+  purchaseDate  DateTime? @db.Date
+
+  purchaseCurrencyId String?
+  purchaseCurrency   Currency? @relation("CollectionPurchaseCurrency", fields: [purchaseCurrencyId], references: [id], onDelete: Restrict)
+
+  // Optional personal market valuation.
+  estimatedMarketValue Decimal?  @db.Decimal(14, 2)
+  marketValueDate      DateTime? @db.Date
+
+  marketCurrencyId String?
+  marketCurrency   Currency? @relation("CollectionMarketCurrency", fields: [marketCurrencyId], references: [id], onDelete: Restrict)
+
+  // Collector's personal notes.
+  notes String?
+
+  images CollectionImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, albumId])
+  @@index([userId, stampId])
+  @@index([stampId])
+  @@index([variantId, stampId])
+  @@index([albumId, userId])
+  @@index([purchaseCurrencyId])
+  @@index([marketCurrencyId])
+}
+
+// Photograph of an individual collector's physical stamp.
+model CollectionImage {
+  id String @id @default(cuid())
+
+  collectionItemId String
+  collectionItem   CollectionItem @relation(fields: [collectionItemId], references: [id], onDelete: Cascade)
+
+  imageType StampImageType
+
+  // Storage identifier, independent of the storage provider.
+  storageKey String @unique
+
+  originalFileName String?
+  mimeType         String?
+  fileSizeBytes    Int?
+  widthPx          Int?
+  heightPx         Int?
+
+  caption   String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([collectionItemId, sortOrder])
+}
+
+// Shared reference image of a catalogue stamp or variation.
+model CatalogueImage {
+  id String @id @default(cuid())
+
+  stampId String
+  stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
+
+  // Optional variation-specific reference image.
+  variantId String?
+  variant   StampVariant? @relation(fields: [variantId, stampId], references: [id, stampId], onDelete: Restrict)
+
+  imageType StampImageType
+
+  storageKey String @unique
+
+  originalFileName String?
+  mimeType         String?
+  fileSizeBytes    Int?
+  widthPx          Int?
+  heightPx         Int?
+
+  // Optional attribution and licensing information.
+  sourceUrl String?
+  credit    String?
+  licence   String?
+
+  caption   String?
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stampId, sortOrder])
+  @@index([variantId, stampId])
 }

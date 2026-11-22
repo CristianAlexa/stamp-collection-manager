@@ -11,6 +11,7 @@ export interface Stamp {
   country: string;
   year: number;
   description?: string;
+  catalogueReferences?: string[];
 }
 
 /**

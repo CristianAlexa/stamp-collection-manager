@@ -1,6 +1,5 @@
 import { deepStrictEqual } from "node:assert/strict";
 import { test } from "node:test";
-// import
 import { filterStamps } from "./filter-stamps";
 import { stamps } from "./stamp-data";
 
@@ -36,4 +35,22 @@ test("returns an empty list when the query matches nothing", () => {
   });
 
   deepStrictEqual(result, []);
+});
+
+test("finds stamps by catalogue reference", () => {
+  const catalogueStamps = [
+    {
+      id: "test-001",
+      name: "Test stamp",
+      country: "Great Britain",
+      year: 1900,
+      catalogueReferences: ["SG-GB-48A"],
+    },
+  ];
+
+  const result = filterStamps(catalogueStamps, {
+    query: "sg-gb-48a",
+  });
+
+  deepStrictEqual(result, catalogueStamps);
 });
