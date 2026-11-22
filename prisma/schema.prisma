@@ -35,6 +35,14 @@ enum PerforationType {
   UNKNOWN
 }
 
+// Describes the postal and gum status of a stamp.
+enum StampStatus {
+  MNH
+  MH
+  USED
+  CTO
+}
+
 // Represents an individual collector.
 // Personal collections and albums will belong to a user.
 model User {
@@ -138,6 +146,7 @@ model Catalogue {
   description String?
 
   references CatalogueReference[]
+  editions   CatalogueEdition[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -155,6 +164,8 @@ model CatalogueReference {
   stampId   String
   stamp     Stamp  @relation(fields: [stampId, countryId], references: [id, countryId], onDelete: Restrict)
 
+  valuations CatalogueValuation[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -162,6 +173,7 @@ model CatalogueReference {
   @@unique([catalogueId, countryId, catalogueNumber])
   // One reference per catalogue for a specific stamp.
   @@unique([stampId, catalogueId])
+  @@unique([id, catalogueId, stampId])
   @@index([stampId, countryId])
 }
 
@@ -172,7 +184,8 @@ model Currency {
   name   String
   symbol String?
 
-  stamps Stamp[]
+  stamps     Stamp[]
+  valuations CatalogueValuation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -345,6 +358,7 @@ model StampVariant {
 
   attributes VariantAttribute[]
   colours    VariantColour[]
+  valuations CatalogueValuation[]
 
   // Optional overrides of parent stamp characteristics.
   watermarkStatus      WatermarkStatus?
@@ -364,6 +378,7 @@ model StampVariant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([id, stampId])
   @@index([stampId])
 }
 
@@ -389,4 +404,67 @@ model VariantColour {
 
   @@id([variantId, colourId])
   @@index([colourId])
+}
+
+// Represents a particular publication of a catalogue.
+model CatalogueEdition {
+  id String @id @default(cuid())
+
+  catalogueId String
+  catalogue   Catalogue @relation(fields: [catalogueId], references: [id], onDelete: Restrict)
+
+  // Publication information.
+  publicationYear Int
+  editionName     String
+  description     String?
+
+  valuations CatalogueValuation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Supports multiple editions within the same year.
+  @@unique([catalogueId, publicationYear, editionName])
+  // Required for catalogue consistency checks.
+  @@unique([id, catalogueId])
+}
+
+// Historical published value of a catalogue stamp.
+model CatalogueValuation {
+  id String @id @default(cuid())
+
+  // Identifies the catalogue reference and edition.
+  catalogueId          String
+  catalogueReferenceId String
+  editionId            String
+  stampId              String
+
+  catalogueReference CatalogueReference @relation(fields: [catalogueReferenceId, catalogueId, stampId], references: [id, catalogueId, stampId], onDelete: Restrict)
+
+  edition CatalogueEdition @relation(fields: [editionId, catalogueId], references: [id, catalogueId], onDelete: Restrict)
+
+  // Optional valuation for a specific stamp variation.
+  variantId String?
+  variant   StampVariant? @relation(fields: [variantId, stampId], references: [id, stampId], onDelete: Restrict)
+
+  // Published stamp status.
+  status StampStatus
+
+  // Monetary value and currency.
+  amount Decimal @db.Decimal(14, 2)
+
+  currencyId String
+  currency   Currency @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+
+  // Optional source information.
+  sourcePage String?
+  notes      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([catalogueReferenceId, status])
+  @@index([editionId, catalogueId])
+  @@index([variantId, stampId])
+  @@index([currencyId])
 }

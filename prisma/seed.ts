@@ -60,8 +60,46 @@ const variationTypes = [
   "Gum Type",
 ];
 
+// Initial currencies for catalogue valuations and acquisitions.
+const currencies = [
+  { code: "GBP", name: "British Pound", symbol: "£" },
+  { code: "USD", name: "US Dollar", symbol: "$" },
+  { code: "EUR", name: "Euro", symbol: "€" },
+  { code: "RON", name: "Romanian Leu", symbol: "lei" },
+  { code: "CHF", name: "Swiss Franc", symbol: "CHF" },
+  {
+    code: "FRF",
+    name: "French Franc",
+    symbol: "F",
+  },
+  {
+    code: "GBX-OLD",
+    name: "Pre-decimal British Pence",
+    symbol: "d",
+  },
+];
+
 async function main() {
   await prisma.$transaction(async (tx) => {
+// Seed reusable currency definitions.
+  for (const currency of currencies) {
+    await tx.currency.upsert({
+      where: {
+        code: currency.code,
+      },
+      update: {},
+      create: currency,
+    });
+  }
+
+  // Keep your existing seed logic here.
+  // Stamp types
+  // Themes
+  // Variation types
+  // Catalogues
+  // Countries
+  // Sample stamps
+
     // Seed predefined stamp classifications.
 for (const name of stampTypes) {
   await tx.stampType.upsert({
@@ -131,6 +169,8 @@ for (const name of variationTypes) {
       });
     }
   });
+
+  
 
   console.log(
     `Seed completed for ${catalogues.length} catalogues and ${stamps.length} sample stamps.`,
