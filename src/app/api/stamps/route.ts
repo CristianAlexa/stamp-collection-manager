@@ -34,6 +34,22 @@ const records = await prisma.stamp.findMany({
     country: {
       select: {
         name: true,
+        code: true,
+      },
+    },
+    catalogueReferences: {
+      select: {
+        catalogueNumber: true,
+        catalogue: {
+          select: {
+            code: true,
+          },
+        },
+      },
+      orderBy: {
+        catalogue: {
+          code: "asc",
+        },
       },
     },
     year: true,
@@ -46,15 +62,33 @@ const records = await prisma.stamp.findMany({
 });
 
     // PostgreSQL permits NULL, while our API type uses an optional string.
-    const stamps: Stamp[] = records.map((record) => ({
-      id: record.id,
-      name: record.name,
-      country: record.country.name,
-      year: record.year,
-      ...(record.description === null
-        ? {}
-        : { description: record.description }),
-    }));
+const stamps: Stamp[] = records.map((record) => {
+  // Build human-readable catalogue references.
+  const references = record.catalogueReferences.map(
+    (reference) =>
+      `${reference.catalogue.code}-${record.country.code ?? record.country.name}-${reference.catalogueNumber}`,
+  );
+
+  // Prefer Stanley Gibbons for unnamed stamps.
+  const preferredReference =
+    references.find((reference) =>
+      reference.startsWith("SG-"),
+    ) ?? references[0];
+
+  return {
+    id: record.id,
+    name:
+      record.name ??
+      preferredReference ??
+      "Unidentified stamp",
+    country: record.country.name,
+    year: record.year,
+    catalogueReferences: references,
+    ...(record.description === null
+      ? {}
+      : { description: record.description }),
+  };
+});
 
     const filteredStamps = filterStamps(stamps, {
       query,

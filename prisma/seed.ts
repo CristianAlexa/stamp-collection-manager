@@ -13,11 +13,36 @@ if (!connectionString) {
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
+const catalogues = [
+  { code: "SG", name: "Stanley Gibbons" },
+  { code: "SC", name: "Scott" },
+  { code: "MI", name: "Michel" },
+  { code: "YT", name: "Yvert & Tellier" },
+];
+
+const countryCodes: Record<string, string> = {
+  "Great Britain": "GB",
+  France: "FR",
+};
+
 async function main() {
-  // Seed the catalogue inside one transaction.
   await prisma.$transaction(async (tx) => {
+    // Populate our supported catalogue systems.
+    for (const catalogue of catalogues) {
+      await tx.catalogue.upsert({
+        where: {
+          code: catalogue.code,
+        },
+        update: {},
+        create: catalogue,
+      });
+    }
+
+    // Populate countries and sample stamps.
     for (const stamp of stamps) {
-      // Create the country only if it does not exist.
+      const countryCode = countryCodes[stamp.country];
+
+      // Find or create the issuing country.
       const country = await tx.country.upsert({
         where: {
           name: stamp.country,
@@ -25,10 +50,11 @@ async function main() {
         update: {},
         create: {
           name: stamp.country,
+          ...(countryCode ? { code: countryCode } : {}),
         },
       });
 
-      // Create the stamp and connect it to its country.
+      // Find or create the stamp.
       await tx.stamp.upsert({
         where: {
           id: stamp.id,
@@ -45,7 +71,9 @@ async function main() {
     }
   });
 
-  console.log(`Seed completed for ${stamps.length} sample stamps.`);
+  console.log(
+    `Seed completed for ${catalogues.length} catalogues and ${stamps.length} sample stamps.`,
+  );
 }
 
 main()

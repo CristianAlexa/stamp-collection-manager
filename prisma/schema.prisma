@@ -35,19 +35,86 @@ model Country {
 // Shared catalogue information used by all collectors.
 model Stamp {
   id          String  @id @default(cuid())
-  name        String
-  year        Int
+  name        String?
   description String?
 
-  // Foreign key referencing the Country table.
-  countryId String
+  // Partial issue dates are supported.
+  // Year represents the mandatory issue year.
+  year       Int
+  issueMonth Int?
+  issueDay   Int?
 
-  // Prisma relation to the issuing country.
-  country Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+  // Issuing country.
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  // Printed denomination and numeric face value.
+  denomination String?
+  faceValue    Decimal? @db.Decimal(14, 6)
+
+  currencyId String?
+  currency   Currency? @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+
+  // Actual physical dimensions in millimetres.
+  widthMm  Decimal? @db.Decimal(7, 3)
+  heightMm Decimal? @db.Decimal(7, 3)
+
+  // International catalogue references.
+  catalogueReferences CatalogueReference[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Index to improve country-based queries.
+  // Required for the compound foreign key.
+  @@unique([id, countryId])
   @@index([countryId])
+  @@index([currencyId])
+}
+
+// Represents an international stamp catalogue.
+model Catalogue {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String  @unique
+  description String?
+
+  references CatalogueReference[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Identifies a stamp within a particular catalogue.
+model CatalogueReference {
+  id              String @id @default(cuid())
+  catalogueNumber String
+
+  catalogueId String
+  catalogue   Catalogue @relation(fields: [catalogueId], references: [id], onDelete: Restrict)
+
+  countryId String
+  stampId   String
+  stamp     Stamp  @relation(fields: [stampId, countryId], references: [id, countryId], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The complete catalogue reference must be unique.
+  @@unique([catalogueId, countryId, catalogueNumber])
+  // One reference per catalogue for a specific stamp.
+  @@unique([stampId, catalogueId])
+  @@index([stampId, countryId])
+}
+
+// Supports modern and historical currencies.
+model Currency {
+  id     String  @id @default(cuid())
+  code   String  @unique
+  name   String
+  symbol String?
+
+  stamps Stamp[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
