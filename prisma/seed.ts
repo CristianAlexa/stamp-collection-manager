@@ -4,6 +4,8 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 import { stamps } from "../src/lib/stamp-data";
+import { seedCatalogue } from "./seeds/seed-catalogue";
+import { seedVariants } from "./seeds/seed-variants";
 
 import {
   catalogues,
@@ -12,6 +14,8 @@ import {
   stampTypes,
   themes,
   variationTypes,
+  colours,
+  perforations,
 } from "./seeds/reference-data";
 
 import { seedReferenceData } from "./seeds/seed-reference";
@@ -37,12 +41,18 @@ async function main(): Promise<void> {
   console.log("Starting database seed...");
 
   await prisma.$transaction(async (tx) => {
-    // Reference records must exist before sample stamps.
-    await seedReferenceData(tx);
+  // 1. Populate reusable reference data.
+  await seedReferenceData(tx);
 
-    // Populate the sample stamp catalogue.
-    await seedStamps(tx);
-  });
+  // 2. Populate the original sample stamps.
+  await seedStamps(tx);
+
+  // 3. Enrich the relational stamp catalogue.
+  await seedCatalogue(tx);
+
+  // 4. Create identifiable stamp variations.
+  await seedVariants(tx);
+});
 
   // Display a summary only after a successful transaction.
   console.log("Database seed completed successfully.");
@@ -56,6 +66,11 @@ async function main(): Promise<void> {
     Themes: themes.length,
     "Variation types": variationTypes.length,
     "Sample stamps": stamps.length,
+    Colours: colours.length,
+Perforations: perforations.length,
+"Additional catalogue stamps": 1,
+"Catalogue references": 2,
+"Stamp variants": 2,
   });
 }
 

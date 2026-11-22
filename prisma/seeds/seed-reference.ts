@@ -7,6 +7,8 @@ import {
   stampTypes,
   themes,
   variationTypes,
+  colours,
+  perforations,
 } from "./reference-data";
 
 /**
@@ -25,6 +27,23 @@ export async function seedReferenceData(
       update: {},
       create: country,
     });
+    // Seed reusable stamp colours.
+for (const colour of colours) {
+  await tx.colour.upsert({
+    where: { name: colour.name },
+    update: {},
+    create: colour,
+  });
+}
+
+// Seed reusable perforation measurements.
+for (const perforation of perforations) {
+  await tx.perforation.upsert({
+    where: { name: perforation.name },
+    update: {},
+    create: perforation,
+  });
+}
   }
 
   // Seed modern and historical currencies.
