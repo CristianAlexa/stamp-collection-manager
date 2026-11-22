@@ -6,6 +6,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { stamps } from "../src/lib/stamp-data";
 import { seedCatalogue } from "./seeds/seed-catalogue";
 import { seedVariants } from "./seeds/seed-variants";
+import { seedCollections } from "./seeds/seed-collections";
 
 import {
   catalogues,
@@ -47,11 +48,14 @@ async function main(): Promise<void> {
   // 2. Populate the original sample stamps.
   await seedStamps(tx);
 
-  // 3. Enrich the relational stamp catalogue.
+  // 3. Enrich the relational catalogue.
   await seedCatalogue(tx);
 
   // 4. Create identifiable stamp variations.
   await seedVariants(tx);
+
+  // 5. Populate personal stamp collections.
+  await seedCollections(tx);
 });
 
   // Display a summary only after a successful transaction.
@@ -71,6 +75,9 @@ Perforations: perforations.length,
 "Additional catalogue stamps": 1,
 "Catalogue references": 2,
 "Stamp variants": 2,
+"Development collectors": 2,
+"Personal albums": 3,
+"Collection items": 7,
   });
 }
 
