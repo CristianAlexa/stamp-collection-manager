@@ -4,15 +4,18 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { stamps } from "../src/lib/stamp-data";
 
+// Validate the database connection string.
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
   throw new Error("DATABASE_URL is missing.");
 }
 
+// Initialise Prisma with the PostgreSQL adapter.
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
+// Supported catalogue systems.
 const catalogues = [
   { code: "SG", name: "Stanley Gibbons" },
   { code: "SC", name: "Scott" },
@@ -20,6 +23,7 @@ const catalogues = [
   { code: "YT", name: "Yvert & Tellier" },
 ];
 
+// Country codes for our initial sample stamps.
 const countryCodes: Record<string, string> = {
   "Great Britain": "GB",
   France: "FR",
@@ -60,7 +64,7 @@ const variationTypes = [
   "Gum Type",
 ];
 
-// Initial currencies for catalogue valuations and acquisitions.
+// Modern and historical currency definitions.
 const currencies = [
   { code: "GBP", name: "British Pound", symbol: "£" },
   { code: "USD", name: "US Dollar", symbol: "$" },
@@ -80,58 +84,48 @@ const currencies = [
 ];
 
 async function main() {
+  // Execute all seed operations inside a single transaction.
   await prisma.$transaction(async (tx) => {
-// Seed reusable currency definitions.
-  for (const currency of currencies) {
-    await tx.currency.upsert({
-      where: {
-        code: currency.code,
-      },
-      update: {},
-      create: currency,
-    });
-  }
-
-  // Keep your existing seed logic here.
-  // Stamp types
-  // Themes
-  // Variation types
-  // Catalogues
-  // Countries
-  // Sample stamps
+    // Seed reusable currency definitions.
+    for (const currency of currencies) {
+      await tx.currency.upsert({
+        where: { code: currency.code },
+        update: {},
+        create: currency,
+      });
+    }
 
     // Seed predefined stamp classifications.
-for (const name of stampTypes) {
-  await tx.stampType.upsert({
-    where: { name },
-    update: {},
-    create: { name },
-  });
-}
+    for (const name of stampTypes) {
+      await tx.stampType.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      });
+    }
 
-// Seed predefined themes.
-for (const name of themes) {
-  await tx.theme.upsert({
-    where: { name },
-    update: {},
-    create: { name },
-  });
-}
+    // Seed predefined themes.
+    for (const name of themes) {
+      await tx.theme.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      });
+    }
 
-// Seed predefined variation types.
-for (const name of variationTypes) {
-  await tx.variationType.upsert({
-    where: { name },
-    update: {},
-    create: { name },
-  });
-}
-    // Populate our supported catalogue systems.
+    // Seed predefined variation types.
+    for (const name of variationTypes) {
+      await tx.variationType.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      });
+    }
+
+    // Populate supported catalogue systems.
     for (const catalogue of catalogues) {
       await tx.catalogue.upsert({
-        where: {
-          code: catalogue.code,
-        },
+        where: { code: catalogue.code },
         update: {},
         create: catalogue,
       });
@@ -143,9 +137,7 @@ for (const name of variationTypes) {
 
       // Find or create the issuing country.
       const country = await tx.country.upsert({
-        where: {
-          name: stamp.country,
-        },
+        where: { name: stamp.country },
         update: {},
         create: {
           name: stamp.country,
@@ -155,9 +147,7 @@ for (const name of variationTypes) {
 
       // Find or create the stamp.
       await tx.stamp.upsert({
-        where: {
-          id: stamp.id,
-        },
+        where: { id: stamp.id },
         update: {},
         create: {
           id: stamp.id,
@@ -170,11 +160,14 @@ for (const name of variationTypes) {
     }
   });
 
-  
-
-  console.log(
-    `Seed completed for ${catalogues.length} catalogues and ${stamps.length} sample stamps.`,
-  );
+  // Display a summary after the transaction succeeds.
+  console.log("Database seed completed successfully.");
+  console.log(`Catalogues: ${catalogues.length}`);
+  console.log(`Sample stamps: ${stamps.length}`);
+  console.log(`Stamp types: ${stampTypes.length}`);
+  console.log(`Themes: ${themes.length}`);
+  console.log(`Variation types: ${variationTypes.length}`);
+  console.log(`Currencies: ${currencies.length}`);
 }
 
 main()
