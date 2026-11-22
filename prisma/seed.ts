@@ -25,8 +25,69 @@ const countryCodes: Record<string, string> = {
   France: "FR",
 };
 
+// Predefined stamp classifications.
+const stampTypes = [
+  "Definitive",
+  "Commemorative",
+  "Airmail",
+  "Postage Due",
+  "Official",
+  "Revenue",
+  "Express Delivery",
+];
+
+// Predefined thematic classifications.
+const themes = [
+  "Animals",
+  "Birds",
+  "Nature",
+  "History",
+  "Royalty",
+  "Transport",
+  "Science",
+  "Architecture",
+  "Sports",
+  "Art",
+];
+
+// Predefined dynamic variation types.
+const variationTypes = [
+  "Plate Number",
+  "Paper Type",
+  "Printing Error",
+  "Printing Method",
+  "Overprint",
+  "Gum Type",
+];
+
 async function main() {
   await prisma.$transaction(async (tx) => {
+    // Seed predefined stamp classifications.
+for (const name of stampTypes) {
+  await tx.stampType.upsert({
+    where: { name },
+    update: {},
+    create: { name },
+  });
+}
+
+// Seed predefined themes.
+for (const name of themes) {
+  await tx.theme.upsert({
+    where: { name },
+    update: {},
+    create: { name },
+  });
+}
+
+// Seed predefined variation types.
+for (const name of variationTypes) {
+  await tx.variationType.upsert({
+    where: { name },
+    update: {},
+    create: { name },
+  });
+}
     // Populate our supported catalogue systems.
     for (const catalogue of catalogues) {
       await tx.catalogue.upsert({

@@ -12,6 +12,29 @@ datasource db {
   provider = "postgresql"
 }
 
+enum WatermarkStatus {
+  NONE
+  PRESENT
+  UNKNOWN
+}
+
+enum WatermarkOrientation {
+  NORMAL
+  INVERTED
+  REVERSED
+  INVERTED_REVERSED
+  SIDEWAYS_LEFT
+  SIDEWAYS_RIGHT
+  UNKNOWN
+}
+
+enum PerforationType {
+  PERFORATED
+  IMPERFORATE
+  PARTIALLY_PERFORATED
+  UNKNOWN
+}
+
 // Represents an individual collector.
 // Personal collections and albums will belong to a user.
 model User {
@@ -24,12 +47,14 @@ model User {
 
 // Represents a stamp-issuing country or territory.
 model Country {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  code      String?  @unique
-  stamps    Stamp[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String             @id @default(cuid())
+  name       String             @unique
+  code       String?            @unique
+  stamps     Stamp[]
+  watermarks WatermarkCountry[]
+  series     StampSeries[]
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 }
 
 // Shared catalogue information used by all collectors.
@@ -62,6 +87,36 @@ model Stamp {
   // International catalogue references.
   catalogueReferences CatalogueReference[]
 
+  // Reusable colours.
+  colours StampColour[]
+
+  // Watermark information.
+  watermarkStatus      WatermarkStatus       @default(NONE)
+  watermarkOrientation WatermarkOrientation?
+
+  watermarkId String?
+  watermark   Watermark? @relation(fields: [watermarkId], references: [id], onDelete: Restrict)
+
+  // Perforation information.
+  perforationType PerforationType @default(UNKNOWN)
+
+  perforationId String?
+  perforation   Perforation? @relation(fields: [perforationId], references: [id], onDelete: Restrict)
+
+  // Stamp classification.
+  stampTypeId String?
+  stampType   StampType? @relation(fields: [stampTypeId], references: [id], onDelete: Restrict)
+
+  // Optional stamp series.
+  seriesId String?
+  series   StampSeries? @relation(fields: [seriesId], references: [id], onDelete: Restrict)
+
+  // Thematic classifications.
+  themes StampTheme[]
+
+  // Explicit stamp variations.
+  variants StampVariant[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -69,6 +124,10 @@ model Stamp {
   @@unique([id, countryId])
   @@index([countryId])
   @@index([currencyId])
+  @@index([watermarkId])
+  @@index([perforationId])
+  @@index([stampTypeId])
+  @@index([seriesId])
 }
 
 // Represents an international stamp catalogue.
@@ -117,4 +176,217 @@ model Currency {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Global library of reusable stamp colours.
+model Colour {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  hexCode     String?
+  description String?
+
+  stamps    StampColour[]
+  variants  VariantColour[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+// Connects stamps to one or more colours.
+model StampColour {
+  stampId  String
+  colourId String
+
+  stamp  Stamp  @relation(fields: [stampId], references: [id], onDelete: Cascade)
+  colour Colour @relation(fields: [colourId], references: [id], onDelete: Restrict)
+
+  @@id([stampId, colourId])
+  @@index([colourId])
+}
+
+// Reusable watermark design.
+model Watermark {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String?
+
+  countries WatermarkCountry[]
+  stamps    Stamp[]
+
+  variants StampVariant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+// Associates watermark designs with issuing countries.
+model WatermarkCountry {
+  watermarkId String
+  countryId   String
+
+  watermark Watermark @relation(fields: [watermarkId], references: [id], onDelete: Cascade)
+  country   Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@id([watermarkId, countryId])
+  @@index([countryId])
+}
+
+// Reusable perforation measurements.
+model Perforation {
+  id String @id @default(cuid())
+
+  // Human-readable identifier, e.g. "14 x 15".
+  name String @unique
+
+  horizontal Decimal? @db.Decimal(6, 3)
+  vertical   Decimal? @db.Decimal(6, 3)
+
+  description String?
+
+  stamps Stamp[]
+
+  variants StampVariant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Expandable classification of stamps.
+model StampType {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  stamps Stamp[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Groups related stamp issues.
+model StampSeries {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  countryId String
+  country   Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  stamps Stamp[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([countryId, name])
+}
+
+// Globally reusable thematic classifications.
+model Theme {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  stamps StampTheme[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Connects a stamp to multiple themes.
+model StampTheme {
+  stampId String
+  themeId String
+
+  stamp Stamp @relation(fields: [stampId], references: [id], onDelete: Cascade)
+  theme Theme @relation(fields: [themeId], references: [id], onDelete: Restrict)
+
+  @@id([stampId, themeId])
+  @@index([themeId])
+}
+
+// Defines a reusable variation characteristic.
+model VariationType {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+
+  values VariationValue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Stores reusable values for a variation type.
+model VariationValue {
+  id    String @id @default(cuid())
+  value String
+
+  variationTypeId String
+  variationType   VariationType @relation(fields: [variationTypeId], references: [id], onDelete: Restrict)
+
+  attributes VariantAttribute[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([variationTypeId, value])
+}
+
+// Explicitly identified variation of a catalogue stamp.
+model StampVariant {
+  id          String  @id @default(cuid())
+  name        String?
+  description String?
+
+  stampId String
+  stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
+
+  attributes VariantAttribute[]
+  colours    VariantColour[]
+
+  // Optional overrides of parent stamp characteristics.
+  watermarkStatus      WatermarkStatus?
+  watermarkOrientation WatermarkOrientation?
+
+  watermarkId String?
+  watermark   Watermark? @relation(fields: [watermarkId], references: [id], onDelete: Restrict)
+
+  perforationType PerforationType?
+
+  perforationId String?
+  perforation   Perforation? @relation(fields: [perforationId], references: [id], onDelete: Restrict)
+
+  widthMm  Decimal? @db.Decimal(7, 3)
+  heightMm Decimal? @db.Decimal(7, 3)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stampId])
+}
+
+// Assigns reusable attribute values to a variation.
+model VariantAttribute {
+  variantId String
+  valueId   String
+
+  variant StampVariant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  value   VariationValue @relation(fields: [valueId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, valueId])
+  @@index([valueId])
+}
+
+// Defines colours specific to a stamp variation.
+model VariantColour {
+  variantId String
+  colourId  String
+
+  variant StampVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  colour  Colour       @relation(fields: [colourId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, colourId])
+  @@index([colourId])
 }
