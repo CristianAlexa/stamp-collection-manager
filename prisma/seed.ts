@@ -4,9 +4,6 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 import { stamps } from "../src/lib/stamp-data";
-import { seedCatalogue } from "./seeds/seed-catalogue";
-import { seedVariants } from "./seeds/seed-variants";
-import { seedCollections } from "./seeds/seed-collections";
 
 import {
   catalogues,
@@ -21,6 +18,10 @@ import {
 
 import { seedReferenceData } from "./seeds/seed-reference";
 import { seedStamps } from "./seeds/seed-stamps";
+import { seedCatalogue } from "./seeds/seed-catalogue";
+import { seedVariants } from "./seeds/seed-variants";
+import { seedCollections } from "./seeds/seed-collections";
+import { assertSafeSeedEnvironment } from "./seeds/seed-safety";
 
 // Validate the database connection string.
 const connectionString = process.env.DATABASE_URL;
@@ -28,6 +29,10 @@ const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error("DATABASE_URL is missing.");
 }
+
+// Validate the target before creating a database client.
+assertSafeSeedEnvironment(connectionString);
+
 
 // Initialise Prisma with the PostgreSQL adapter.
 const adapter = new PrismaPg({ connectionString });
@@ -42,23 +47,23 @@ async function main(): Promise<void> {
   console.log("Starting database seed...");
 
   await prisma.$transaction(async (tx) => {
-  // 1. Populate reusable reference data.
-  await seedReferenceData(tx);
+    // 1. Populate reusable reference data.
+    await seedReferenceData(tx);
 
-  // 2. Populate the original sample stamps.
-  await seedStamps(tx);
+    // 2. Populate the original sample stamps.
+    await seedStamps(tx);
 
-  // 3. Enrich the relational catalogue.
-  await seedCatalogue(tx);
+    // 3. Enrich the relational catalogue.
+    await seedCatalogue(tx);
 
-  // 4. Create identifiable stamp variations.
-  await seedVariants(tx);
+    // 4. Create identifiable stamp variations.
+    await seedVariants(tx);
 
-  // 5. Populate personal stamp collections.
-  await seedCollections(tx);
-});
+    // 5. Populate personal stamp collections.
+    await seedCollections(tx);
+  });
 
-  // Display a summary only after a successful transaction.
+  // Display a summary after a successful transaction.
   console.log("Database seed completed successfully.");
   console.log("Seed definitions processed:");
 
@@ -71,13 +76,13 @@ async function main(): Promise<void> {
     "Variation types": variationTypes.length,
     "Sample stamps": stamps.length,
     Colours: colours.length,
-Perforations: perforations.length,
-"Additional catalogue stamps": 1,
-"Catalogue references": 2,
-"Stamp variants": 2,
-"Development collectors": 2,
-"Personal albums": 3,
-"Collection items": 7,
+    Perforations: perforations.length,
+    "Additional catalogue stamps": 1,
+    "Catalogue references": 2,
+    "Stamp variants": 2,
+    "Development collectors": 2,
+    "Personal albums": 3,
+    "Collection items": 7,
   });
 }
 

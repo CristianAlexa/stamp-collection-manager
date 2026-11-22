@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test src/lib/filter-stamps.test.ts",
-    "db:seed": "prisma db seed"
+    "db:seed": "ALLOW_DEV_SEED=true prisma db seed",
+    "test:integration": "bash scripts/run-integration-tests.sh"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
