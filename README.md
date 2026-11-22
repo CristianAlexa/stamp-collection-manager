@@ -30,8 +30,8 @@ learning and portfolio project.
 - React
 - TypeScript
 - Tailwind CSS
-- PostgreSQL (planned)
-- Prisma ORM (planned)
+- PostgreSQL
+- Prisma ORM
 - Docker
 
 ## Getting Started
@@ -43,15 +43,10 @@ learning and portfolio project.
 
 ### Installation
 
-Clone the repository and install dependencies:
-
-    npm install
-
-Start the development server:
-
-    npm run dev
-
-Open http://localhost:3000 in your browser.
+Follow the [Development Setup](docs/development-setup.md) guide to install
+locked dependencies, configure `.env`, start PostgreSQL, generate Prisma Client,
+apply migrations and seed the sample catalogue. Then run `npm run dev`
+and open the local address printed by Next.js.
 
 ### Code Quality
 
