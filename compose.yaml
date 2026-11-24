@@ -10,5 +10,26 @@ services:
     ports:
       - "127.0.0.1:5433:5432"
 
+  db-test:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: stamp_test
+      POSTGRES_PASSWORD: stamp_test_only
+      POSTGRES_DB: stamp_collection_test
+    volumes:
+      - stamp_postgres_test_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U stamp_test -d stamp_collection_test"
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
 volumes:
   stamp_postgres_data:
+  stamp_postgres_test_data:
