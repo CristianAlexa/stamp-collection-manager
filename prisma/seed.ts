@@ -12,7 +12,6 @@ import {
   stampTypes,
   themes,
   variationTypes,
-  colours,
   perforations,
 } from "./seeds/reference-data";
 
@@ -75,7 +74,6 @@ async function main(): Promise<void> {
     Themes: themes.length,
     "Variation types": variationTypes.length,
     "Sample stamps": stamps.length,
-    Colours: colours.length,
     Perforations: perforations.length,
     "Additional catalogue stamps": 1,
     "Catalogue references": 2,

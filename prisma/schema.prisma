@@ -126,8 +126,9 @@ model Stamp {
   // International catalogue references.
   catalogueReferences CatalogueReference[]
 
-  // Reusable colours.
-  colours StampColour[]
+  // Optional catalogue colour description.
+  // Supports historical shades and multicoloured issues.
+  colour String?
 
   // Watermark information.
   watermarkStatus      WatermarkStatus       @default(NONE)
@@ -225,31 +226,6 @@ model Currency {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-// Global library of reusable stamp colours.
-model Colour {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  hexCode     String?
-  description String?
-
-  stamps    StampColour[]
-  variants  VariantColour[]
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-}
-
-// Connects stamps to one or more colours.
-model StampColour {
-  stampId  String
-  colourId String
-
-  stamp  Stamp  @relation(fields: [stampId], references: [id], onDelete: Cascade)
-  colour Colour @relation(fields: [colourId], references: [id], onDelete: Restrict)
-
-  @@id([stampId, colourId])
-  @@index([colourId])
 }
 
 // Reusable watermark design.
@@ -393,7 +369,9 @@ model StampVariant {
   stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
 
   attributes      VariantAttribute[]
-  colours         VariantColour[]
+  // Optional colour override for this variation.
+  // NULL means the parent stamp colour applies.
+  colour          String?
   valuations      CatalogueValuation[]
   collectionItems CollectionItem[]
   images          CatalogueImage[]
@@ -430,18 +408,6 @@ model VariantAttribute {
 
   @@id([variantId, valueId])
   @@index([valueId])
-}
-
-// Defines colours specific to a stamp variation.
-model VariantColour {
-  variantId String
-  colourId  String
-
-  variant StampVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  colour  Colour       @relation(fields: [colourId], references: [id], onDelete: Restrict)
-
-  @@id([variantId, colourId])
-  @@index([colourId])
 }
 
 // Represents a particular publication of a catalogue.
