@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { filterStamps } from "./filter-stamps";
 import { stamps } from "./stamp-data";
 
+
 const noFilters = { query: "", country: "", year: undefined };
 
 test("returns all stamps when filters are empty", () => {
@@ -53,4 +54,20 @@ test("finds stamps by catalogue reference", () => {
   });
 
   deepStrictEqual(result, catalogueStamps);
+});
+
+test("filters stamps containing optional catalogue fields", () => {
+  const result = filterStamps(stamps, {
+    query: "Penny Black",
+  });
+
+  deepStrictEqual(result, [stamps[0]]);
+});
+
+test("filters stamps with missing catalogue characteristics", () => {
+  const result = filterStamps(stamps, {
+    query: "Penny Red",
+  });
+
+  deepStrictEqual(result, [stamps[1]]);
 });
