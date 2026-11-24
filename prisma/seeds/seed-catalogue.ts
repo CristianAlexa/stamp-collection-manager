@@ -12,10 +12,6 @@ export async function seedCatalogue(
     where: { code: "GB" },
   });
 
-  const currency = await tx.currency.findUniqueOrThrow({
-    where: { code: "GBX-OLD" },
-  });
-
   const stampType = await tx.stampType.findUniqueOrThrow({
     where: { name: "Definitive" },
   });
@@ -32,9 +28,7 @@ export async function seedCatalogue(
   const pennyBlack = await tx.stamp.update({
     where: { id: "stamp-001" },
     data: {
-      denomination: "1d",
-      faceValue: 1,
-      currencyId: currency.id,
+      faceValue: "1d",
       stampTypeId: stampType.id,
       perforationType: "IMPERFORATE",
     },
@@ -63,9 +57,7 @@ export async function seedCatalogue(
         "The 1864 perforated rose-red plate-number issue.",
       year: 1864,
       countryId: country.id,
-      denomination: "1d",
-      faceValue: 1,
-      currencyId: currency.id,
+      faceValue: "1d",
       stampTypeId: stampType.id,
       perforationType: "PERFORATED",
       perforationId: perforation.id,

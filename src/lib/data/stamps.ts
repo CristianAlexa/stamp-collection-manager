@@ -88,7 +88,6 @@ export async function getCatalogueStampById(stampId: string) {
     },
     include: {
       country: true,
-      currency: true,
       stampType: true,
       perforation: true,
       watermark: true,

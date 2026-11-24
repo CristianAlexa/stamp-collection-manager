@@ -112,12 +112,9 @@ model Stamp {
   countryId String
   country   Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
 
-  // Printed denomination and numeric face value.
-  denomination String?
-  faceValue    Decimal? @db.Decimal(14, 6)
-
-  currencyId String?
-  currency   Currency? @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  // Original face value as described in the stamp catalogue.
+  // Supports historical currencies, fractions and service labels.
+  faceValue String?
 
   // Actual physical dimensions in millimetres.
   widthMm  Decimal? @db.Decimal(7, 3)
@@ -166,7 +163,6 @@ model Stamp {
   // Required for the compound foreign key.
   @@unique([id, countryId])
   @@index([countryId])
-  @@index([currencyId])
   @@index([watermarkId])
   @@index([perforationId])
   @@index([stampTypeId])
@@ -212,14 +208,13 @@ model CatalogueReference {
   @@index([stampId, countryId])
 }
 
-// Supports modern and historical currencies.
 model Currency {
   id     String  @id @default(cuid())
   code   String  @unique
   name   String
   symbol String?
 
-  stamps            Stamp[]
+  // Financial valuations and collection prices.
   valuations        CatalogueValuation[]
   purchasedItems    CollectionItem[]     @relation("CollectionPurchaseCurrency")
   marketValuedItems CollectionItem[]     @relation("CollectionMarketCurrency")
