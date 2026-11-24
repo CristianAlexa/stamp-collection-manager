@@ -76,14 +76,24 @@ model User {
 
 // Represents a stamp-issuing country or territory.
 model Country {
-  id         String             @id @default(cuid())
-  name       String             @unique
-  code       String?            @unique
+  id   String  @id @default(cuid())
+  name String  @unique
+  code String? @unique
+
+  // Optional country or historical territory flag.
+  flagUrl String?
+
+  // Optional historical and postal information.
+  description String?
+
+  // Existing relationships.
   stamps     Stamp[]
   watermarks WatermarkCountry[]
   series     StampSeries[]
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+
+  // Record timestamps.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Shared catalogue information used by all collectors.
@@ -102,12 +112,9 @@ model Stamp {
   countryId String
   country   Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
 
-  // Printed denomination and numeric face value.
-  denomination String?
-  faceValue    Decimal? @db.Decimal(14, 6)
-
-  currencyId String?
-  currency   Currency? @relation(fields: [currencyId], references: [id], onDelete: Restrict)
+  // Original face value as described in the stamp catalogue.
+  // Supports historical currencies, fractions and service labels.
+  faceValue String?
 
   // Actual physical dimensions in millimetres.
   widthMm  Decimal? @db.Decimal(7, 3)
@@ -116,8 +123,9 @@ model Stamp {
   // International catalogue references.
   catalogueReferences CatalogueReference[]
 
-  // Reusable colours.
-  colours StampColour[]
+  // Optional catalogue colour description.
+  // Supports historical shades and multicoloured issues.
+  colour String?
 
   // Watermark information.
   watermarkStatus      WatermarkStatus       @default(NONE)
@@ -155,7 +163,6 @@ model Stamp {
   // Required for the compound foreign key.
   @@unique([id, countryId])
   @@index([countryId])
-  @@index([currencyId])
   @@index([watermarkId])
   @@index([perforationId])
   @@index([stampTypeId])
@@ -201,45 +208,19 @@ model CatalogueReference {
   @@index([stampId, countryId])
 }
 
-// Supports modern and historical currencies.
 model Currency {
   id     String  @id @default(cuid())
   code   String  @unique
   name   String
   symbol String?
 
-  stamps            Stamp[]
+  // Financial valuations and collection prices.
   valuations        CatalogueValuation[]
   purchasedItems    CollectionItem[]     @relation("CollectionPurchaseCurrency")
   marketValuedItems CollectionItem[]     @relation("CollectionMarketCurrency")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-// Global library of reusable stamp colours.
-model Colour {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  hexCode     String?
-  description String?
-
-  stamps    StampColour[]
-  variants  VariantColour[]
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-}
-
-// Connects stamps to one or more colours.
-model StampColour {
-  stampId  String
-  colourId String
-
-  stamp  Stamp  @relation(fields: [stampId], references: [id], onDelete: Cascade)
-  colour Colour @relation(fields: [colourId], references: [id], onDelete: Restrict)
-
-  @@id([stampId, colourId])
-  @@index([colourId])
 }
 
 // Reusable watermark design.
@@ -383,7 +364,9 @@ model StampVariant {
   stamp   Stamp  @relation(fields: [stampId], references: [id], onDelete: Restrict)
 
   attributes      VariantAttribute[]
-  colours         VariantColour[]
+  // Optional colour override for this variation.
+  // NULL means the parent stamp colour applies.
+  colour          String?
   valuations      CatalogueValuation[]
   collectionItems CollectionItem[]
   images          CatalogueImage[]
@@ -420,18 +403,6 @@ model VariantAttribute {
 
   @@id([variantId, valueId])
   @@index([valueId])
-}
-
-// Defines colours specific to a stamp variation.
-model VariantColour {
-  variantId String
-  colourId  String
-
-  variant StampVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  colour  Colour       @relation(fields: [colourId], references: [id], onDelete: Restrict)
-
-  @@id([variantId, colourId])
-  @@index([colourId])
 }
 
 // Represents a particular publication of a catalogue.

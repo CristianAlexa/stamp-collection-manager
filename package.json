@@ -2,15 +2,16 @@
   "name": "stamp-collection-manager",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "test": "tsx --test src/lib/filter-stamps.test.ts",
-    "db:seed": "ALLOW_DEV_SEED=true prisma db seed",
-    "test:integration": "bash scripts/run-integration-tests.sh"
-  },
+ "scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "eslint",
+  "test": "tsx --test src/lib/filter-stamps.test.ts src/lib/stamp-colour.test.ts",
+  "db:seed": "ALLOW_DEV_SEED=true prisma db seed",
+  "test:integration": "bash scripts/run-integration-tests.sh",
+  "test:migrations": "bash scripts/run-migration-tests.sh"
+},
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",

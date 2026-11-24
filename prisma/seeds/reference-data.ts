@@ -64,12 +64,6 @@ export const currencies = [
   },
 ] satisfies Prisma.CurrencyCreateInput[];
 
-// Reusable stamp colour definitions.
-export const colours = [
-  { name: "Black" },
-  { name: "Rose Red" },
-] satisfies Prisma.ColourCreateInput[];
-
 // Reusable perforation measurements.
 export const perforations = [
   {

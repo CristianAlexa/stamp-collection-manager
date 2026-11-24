@@ -74,6 +74,7 @@ export async function getCatalogueStamps(): Promise<Stamp[]> {
   });
 }
 
+
 /**
  * Retrieves detailed information about one catalogue stamp,
  * including its related attributes and variations.
@@ -87,16 +88,9 @@ export async function getCatalogueStampById(stampId: string) {
     },
     include: {
       country: true,
-      currency: true,
       stampType: true,
       perforation: true,
       watermark: true,
-
-      colours: {
-        include: {
-          colour: true,
-        },
-      },
 
       catalogueReferences: {
         include: {
@@ -115,11 +109,6 @@ export async function getCatalogueStampById(stampId: string) {
               },
             },
           },
-          colours: {
-            include: {
-              colour: true,
-            },
-          },
         },
         orderBy: {
           name: "asc",
@@ -127,4 +116,4 @@ export async function getCatalogueStampById(stampId: string) {
       },
     },
   });
-}  
+}
