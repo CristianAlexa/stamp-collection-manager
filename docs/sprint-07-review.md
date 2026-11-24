@@ -204,7 +204,8 @@ The Week 24 MVP and Week 36 release targets remain unchanged.
 ## 11. Merge Record
 
 - Feature branch: feature/week-07-database-seeding
-- Pull request: Pending
-- Merge commit: Pending
-- Final verification: Pending
+- Pull request: #26
+- Merge commit: 9cd39a20ac7d1af30b56d6618f44495b0bc040c6
+- Merge status: Completed — 24 November 2026
+- Implementation acceptance: 56/56 criteria reported passed, subject to final local main synchronisation
 
