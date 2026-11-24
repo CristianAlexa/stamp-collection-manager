@@ -29,7 +29,7 @@ maintainability and production readiness.
 | DB-004 | Inherited variation attribute validation | High | Open |
 | DB-005 | Detailed partial perforation specifications | Medium | Open |
 | DB-006 | Catalogue-specific valuation classifications | Medium | Open |
-| DB-007 | Automated database integration tests | High | Open |
+| DB-007 | Automated database integration tests | High | Completed — Week 07 |
 
 ## 4. Authentication and Security
 
@@ -92,9 +92,26 @@ for historical traceability.
 | Sprint | Description |
 |---|---|
 | Week 06 | Initial technical debt register created |
+| Week 07 | Database integration tests completed; new database, API and tooling improvements recorded |
 
 ## Related Documentation
 
 - [Database Architecture](./database-architecture.md)
 - [Database ERD](./database-erd.md)
 - [Development Roadmap](../README.md)
+
+
+### Additional Database Improvements
+
+| ID | Improvement | Priority | Status |
+|---|---|---|---|
+| DB-008 | Move catalogue filtering and pagination into PostgreSQL | Medium | Open |
+| DB-009 | Isolate integration test fixtures and implement test cleanup for CRUD tests | Medium | Open |
+| DB-010 | Separate production reference-data seeding from development sample data | High | Open |
+
+### Additional Application Improvements
+
+| ID | Improvement | Priority | Status |
+|---|---|---|---|
+| APP-001 | Correct the INVALIDID_YEAR API error code while preserving compatibility | Low | Open |
+| APP-002 | Make database testing scripts cross-platform | Low | Open |

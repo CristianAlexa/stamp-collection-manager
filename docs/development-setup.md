@@ -32,20 +32,30 @@ The example connection uses the development credentials in `compose.yaml`:
 DATABASE_URL="postgresql://stamp_app:stamp_dev_only@127.0.0.1:5433/stamp_collection?schema=public"
 ```
 
-Start PostgreSQL, generate Prisma Client, apply committed migrations and seed
-the sample catalogue:
+
+Start PostgreSQL, generate Prisma Client, apply the existing migrations and populate the development database:
 
 ```bash
 docker compose up -d db
-npx prisma generate --config ./prisma7.config.ts
-npx prisma migrate deploy --config ./prisma7.config.ts
-npx prisma migrate status --config ./prisma7.config.ts
-npx prisma db seed --config ./prisma7.config.ts
-npx tsx scripts/check-stamps.ts
+npx prisma generate
+npx prisma migrate deploy
+npx prisma migrate status
+npm run db:seed
 ```
 
-The seed creates three sample stamps with stable IDs. Repeated runs preserve
-existing records and add any missing samples.
+The development seed command requires explicit permission through
+`ALLOW_DEV_SEED=true`, supplied by the npm script.
+
+The seed populates reusable reference data, sample catalogue
+stamps, stamp variations, fictional collectors, personal albums
+and collection items.
+
+Seed operations are idempotent and preserve existing database
+records rather than resetting the database.
+
+The development seed targets only the explicitly approved local
+database configuration. Production seeding is prohibited.
+
 
 Start the development server:
 
@@ -115,3 +125,80 @@ Stop the server with Control + C.
 
 Tailwind CSS v4 runs through `@tailwindcss/postcss`, configured in
 `postcss.config.mjs`.
+
+
+## Database Integration Testing
+
+Integration tests use a separate PostgreSQL database, isolated
+from the development database.
+
+| Setting | Development | Testing |
+|---|---|---|
+| Docker service | db | db-test |
+| Host port | 5433 | 5434 |
+| Database | stamp_collection | stamp_collection_test |
+| Database user | stamp_app | stamp_test |
+
+Both databases use separate Docker volumes.
+
+### Running the tests
+
+Start Docker Desktop, then execute:
+
+```bash
+npm run test:integration
+```
+
+The integration test runner:
+
+1. Starts the isolated PostgreSQL test container.
+2. Applies the existing Prisma migrations.
+3. Generates Prisma Client.
+4. Seeds the test database with development fixtures.
+5. Executes automated database and seed safety tests.
+
+The test suite contains:
+
+- 12 database integration tests.
+- 7 seed safety tests.
+
+The existing `npm test` command executes four filtering unit tests.
+
+### Database safety
+
+Development seeding requires explicit permission:
+
+```bash
+npm run db:seed
+```
+
+The underlying seed command rejects execution when permission
+is missing or when the database target is not approved.
+
+The integration test runner targets only the local test database.
+
+Never run `docker compose down -v` unless intentionally removing
+the stored development and test database volumes.
+
+### Platform compatibility
+
+The integration test runner uses Bash and POSIX-style environment
+variable assignments.
+
+It is supported on the project's macOS development environment.
+On Windows, run it through WSL or a compatible Bash environment.
+
+Native PowerShell compatibility is a future improvement.
+
+### Testing limitations
+
+Integration tests currently rely on predefined development fixtures.
+
+They verify database queries, missing records, collection statistics
+and user-scoped data access.
+
+They do not replace application authentication or request-level
+authorisation checks.
+
+Future CRUD integration tests will require isolated fixture
+creation and cleanup.
