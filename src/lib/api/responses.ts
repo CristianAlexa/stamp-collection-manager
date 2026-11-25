@@ -33,7 +33,7 @@ export function apiList<T>(data: T[]): Response {
 export function apiError(
     code: string,
     message: string,
-    status: 400 | 401 | 403 | 404 | 500 ,
+    status: 400 | 401 | 403 | 404 | 409 | 500 ,
 ): Response {
     const response: ApiErrorResponse = { error: { code, message } };
 

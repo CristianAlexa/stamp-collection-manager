@@ -83,3 +83,21 @@ test("returns status 204 without a response body", async () => {
   assert.equal(response.status, 204);
   assert.equal(await response.text(), "");
 });
+
+
+test("returns status 409 for a resource conflict", async () => {
+  const response = apiError(
+    "DUPLICATE_CATALOGUE_REFERENCE",
+    "The catalogue reference already exists.",
+    409,
+  );
+
+  assert.equal(response.status, 409);
+
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: "DUPLICATE_CATALOGUE_REFERENCE",
+      message: "The catalogue reference already exists.",
+    },
+  });
+});
