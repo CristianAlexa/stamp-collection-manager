@@ -1,17 +1,26 @@
 /**
- * Represents the basic information about a stamp
- * in our shared catalogue.
+ * Represents a stamp returned by our shared catalogue.
  *
- * We will extend this model when we introduce
- * PostgreSQL and Prisma.
+ * This application-facing interface is independent of
+ * the underlying Prisma database model.
  */
 export interface Stamp {
   id: string;
   name: string;
   country: string;
   year: number;
+
+  // Optional catalogue information.
   description?: string;
   catalogueReferences?: string[];
+
+  // Optional issuing country metadata.
+  countryFlagUrl?: string | null;
+  countryDescription?: string | null;
+
+  // Printed denomination and catalogue colour.
+  faceValue?: string | null;
+  colour?: string | null;
 }
 
 /**

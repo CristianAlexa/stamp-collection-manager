@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
 import { prisma } from "../../src/lib/prisma";
+import { getEffectiveStampColour } from "../../src/lib/stamp-colour";
 
 import {
   getCatalogueStamps,
@@ -230,4 +231,89 @@ test("returns empty results for an unknown collector", async () => {
       totalAlbums: 0,
     },
   );
+});
+
+test("returns refined catalogue properties", async () => {
+  const stamps = await getCatalogueStamps();
+
+  const pennyBlack = stamps.find(
+    (stamp) => stamp.id === "stamp-001",
+  );
+
+  assert.ok(pennyBlack);
+  assert.equal(pennyBlack.faceValue, "1d");
+  assert.equal(pennyBlack.colour, "Black");
+});
+
+test("preserves missing catalogue characteristics as null", async () => {
+  const stamps = await getCatalogueStamps();
+
+  const bordeaux = stamps.find(
+    (stamp) => stamp.id === "stamp-003",
+  );
+
+  assert.ok(bordeaux);
+  assert.equal(bordeaux.faceValue, null);
+  assert.equal(bordeaux.colour, null);
+});
+
+test("maps country metadata into catalogue results", async () => {
+  const stamps = await getCatalogueStamps();
+
+  const pennyBlack = stamps.find(
+    (stamp) => stamp.id === "stamp-001",
+  );
+
+  assert.ok(pennyBlack);
+
+  const country = await prisma.country.findUniqueOrThrow({
+    where: {
+      name: "Great Britain",
+    },
+  });
+
+  assert.equal(
+    pennyBlack.countryFlagUrl,
+    country.flagUrl,
+  );
+
+  assert.equal(
+    pennyBlack.countryDescription,
+    country.description,
+  );
+});
+
+test("inherits catalogue colour for plate variants", async () => {
+  const stamp = await getCatalogueStampById("stamp-004");
+
+  assert.ok(stamp);
+  assert.equal(stamp.colour, "Rose Red");
+  assert.equal(stamp.faceValue, "1d");
+  assert.equal(stamp.variants.length, 2);
+
+  for (const variant of stamp.variants) {
+    assert.equal(variant.colour, null);
+
+    assert.equal(
+      getEffectiveStampColour(
+        stamp.colour,
+        variant.colour,
+      ),
+      "Rose Red",
+    );
+  }
+});
+
+test("preserves financial currency relationships", async () => {
+  const items = await getUserCollection(collectorAId);
+
+  assert.ok(items.length > 0);
+
+  for (const item of items) {
+    assert.ok("purchaseCurrency" in item);
+    assert.ok("marketCurrency" in item);
+
+    assert.ok("faceValue" in item.stamp);
+    assert.ok("colour" in item.stamp);
+  }
 });

@@ -121,6 +121,42 @@ export function StampList() {
             <p className="mt-1 text-sm text-app-muted">
               {stamp.country} · {stamp.year}
             </p>
+            {/* Display the available catalogue characteristics. */}
+<dl className="mt-3 space-y-1 text-sm">
+  <div className="flex items-center justify-between gap-3">
+    <dt className="text-app-muted">
+      Face value
+    </dt>
+
+    <dd className="font-medium text-app-foreground">
+      {stamp.faceValue?.trim() || "Not specified"}
+    </dd>
+  </div>
+
+  <div className="flex items-center justify-between gap-3">
+    <dt className="text-app-muted">
+      Colour
+    </dt>
+
+    <dd className="font-medium text-app-foreground">
+      {stamp.colour?.trim() || "Not specified"}
+    </dd>
+  </div>
+</dl>
+
+{/* Display available international catalogue references. */}
+{Boolean(stamp.catalogueReferences?.length) && (
+  <div className="mt-3 flex flex-wrap gap-2">
+    {stamp.catalogueReferences?.map((reference) => (
+      <span
+        key={reference}
+        className="rounded-md border border-app-border px-2 py-1 text-xs text-app-muted"
+      >
+        {reference}
+      </span>
+    ))}
+  </div>
+)}
 
             {stamp.description && (
               <p className="mt-3 text-sm text-app-muted">{stamp.description}</p>
