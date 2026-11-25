@@ -1,13 +1,8 @@
+
 import { filterStamps } from "@/lib/filter-stamps";
 import { getCatalogueStamps } from "@/lib/data/stamps";
 import { stampYearSchema } from "@/lib/stamp-query-schema";
-
-import type {
-  ApiErrorResponse,
-  ApiListResponse,
-} from "@/types/api";
-
-import type { Stamp } from "@/types/stamp";
+import { apiList, apiError } from "@/lib/api/responses";
 
 export const runtime = "nodejs";
 
@@ -24,35 +19,25 @@ export async function GET(request: Request) {
   );
 
   if (!yearResult.success) {
-    const response: ApiErrorResponse = {
-      error: {
-        code: "INVALIDID_YEAR",
-        message: "Enter a valid stamp year",
-      },
-    };
-
-    return Response.json(response, {
-      status: 400,
-    });
+    return apiError(
+      "INVALIDID_YEAR",
+      "Enter a valid stamp year",
+      400,
+    );
   }
 
   try {
     // Retrieve catalogue records through the DAL.
     const stamps = await getCatalogueStamps();
 
-    // Apply the existing catalogue filters.
+    // Apply existing catalogue filters.
     const filteredStamps = filterStamps(stamps, {
       query,
       country,
       year: yearResult.data,
     });
 
-    const response: ApiListResponse<Stamp> = {
-      data: filteredStamps,
-      count: filteredStamps.length,
-    };
-
-    return Response.json(response);
+    return apiList(filteredStamps);
   } catch (error: unknown) {
     // Detailed database errors remain on the server.
     console.error(
@@ -60,16 +45,10 @@ export async function GET(request: Request) {
       error,
     );
 
-    const response: ApiErrorResponse = {
-      error: {
-        code: "DATABASE_ERROR",
-        message:
-          "Could not load the stamp catalogue. Try again later.",
-      },
-    };
-
-    return Response.json(response, {
-      status: 500,
-    });
+    return apiError(
+      "DATABASE_ERROR",
+      "Could not load the stamp catalogue. Try again later.",
+      500,
+    );
   }
 }
