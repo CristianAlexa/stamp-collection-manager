@@ -41,7 +41,7 @@ DB-001 remains applicable to reusable definitions other than the removed colour 
 - **Issue:** The generated migration removed denomination and currency information without transferring it to the new text field.
 - **Resolution:** Recovered the original printed denominations, removed the duplicate unapplied migration, implemented a transactional data-preserving migration, verified populated upgrades and fresh installations, and reconstructed affected local databases.
 - **Prevention:** Review SQL before applying destructive changes; verify backups; test both fresh installations and populated upgrades; preserve shared migration history.
-- **Follow-up:** Automated regression protection in Step 7 (`npm run test:migrations`) covers historical denomination and colour transformations. Execution remains pending confirmation.
+- **Follow-up:** Automated regression protection in Step 7 (`npm run test:migrations`) covers historical denomination and colour transformations. All eight assertion groups passed on 25 November 2026, as evidenced by the supplied local terminal output.
 
 Retain the original local identifier for this resolved incident if one was already assigned in Step 5. The published baseline did not contain that identifier, so this entry does not invent a replacement.
 
@@ -112,7 +112,7 @@ Security and ownership requirements must be resolved before production deploymen
 |---|---|
 | Week 06 | Initial technical debt register created |
 | Week 07 | Database integration tests completed; database, API and tooling improvements recorded |
-| Sprint 07.5 | Simplified catalogue attributes; resolved the face value migration incident; introduced planned automated migration regression coverage and colour autocomplete follow-up |
+| Sprint 07.5 | Simplified catalogue attributes; resolved the face value migration incident; implemented and locally verified automated migration regression coverage; colour autocomplete remains planned |
 
 ## Related Documentation
 

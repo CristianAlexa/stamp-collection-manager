@@ -315,7 +315,7 @@ The Prisma schema and reviewed SQL migrations are the authoritative database def
 | Historical valuations | Implemented |
 | Personal collection foundation | Implemented |
 | Image metadata | Implemented |
-| Migration regression suite | Step 7 — execution pending confirmation |
+| Migration regression suite | Implemented; all eight assertion groups passed locally |
 | Authentication | Planned |
 | Image storage | Planned |
 | Album page designer | Planned |

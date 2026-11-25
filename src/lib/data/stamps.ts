@@ -9,17 +9,33 @@ import type { Stamp } from "@/types/stamp";
  * Converts database records into the existing
  * application Stamp interface.
  */
+/**
+ * Retrieves shared catalogue stamps.
+ *
+ * Converts database records into the application-facing
+ * Stamp interface.
+ */
 export async function getCatalogueStamps(): Promise<Stamp[]> {
   const records = await prisma.stamp.findMany({
     select: {
       id: true,
       name: true,
+      year: true,
+      description: true,
+
+      // Refined catalogue properties.
+      faceValue: true,
+      colour: true,
+
       country: {
         select: {
           name: true,
           code: true,
+          flagUrl: true,
+          description: true,
         },
       },
+
       catalogueReferences: {
         select: {
           catalogueNumber: true,
@@ -35,16 +51,15 @@ export async function getCatalogueStamps(): Promise<Stamp[]> {
           },
         },
       },
-      year: true,
-      description: true,
     },
+
     orderBy: [
       { year: "asc" },
       { id: "asc" },
     ],
   });
 
-  // Convert PostgreSQL records into application objects.
+  // Convert database records into application objects.
   return records.map((record) => {
     // Build human-readable catalogue references.
     const references = record.catalogueReferences.map(
@@ -60,13 +75,26 @@ export async function getCatalogueStamps(): Promise<Stamp[]> {
 
     return {
       id: record.id,
+
       name:
         record.name ??
         preferredReference ??
         "Unidentified stamp",
+
       country: record.country.name,
       year: record.year,
+
+      // Preserve existing catalogue references.
       catalogueReferences: references,
+
+      // Expose the refined database properties.
+      faceValue: record.faceValue,
+      colour: record.colour,
+
+      countryFlagUrl: record.country.flagUrl,
+      countryDescription: record.country.description,
+
+      // Preserve existing description behaviour.
       ...(record.description === null
         ? {}
         : { description: record.description }),
