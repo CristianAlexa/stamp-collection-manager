@@ -118,11 +118,11 @@ npm run test:migrations
 npm run build
 ```
 
-The `test:migrations` command is introduced in Sprint 07.5 Step 7. Complete and verify the corresponding test files and npm script before using it.
+The `test:migrations` command was introduced in Sprint 07.5 Step 7. The runner and SQL fixtures are implemented and the regression suite passed locally on 25 November 2026.
 
 ### Unit tests
 
-The Step 7 target is six filtering tests and nine colour inheritance tests, using Node.js test runner through `tsx`. The filtering and colour suites live in `src/lib/filter-stamps.test.ts` and `src/lib/stamp-colour.test.ts` respectively.
+The unit suite contains six filtering tests and nine colour inheritance tests, using the Node.js test runner through `tsx`. The filtering and colour suites live in `src/lib/filter-stamps.test.ts` and `src/lib/stamp-colour.test.ts` respectively.
 
 ```bash
 npm test
@@ -167,7 +167,7 @@ npm run test:integration
 
 The runner starts the isolated PostgreSQL test container, applies migrations, generates Prisma Client, seeds the approved test database and executes data-access and seed safety tests.
 
-| Test category | Step 7 target |
+| Test category | Sprint 07.5 verified local count |
 |---|---:|
 | Catalogue filtering unit tests | 6 |
 | Colour inheritance unit tests | 9 |
@@ -176,7 +176,7 @@ The runner starts the isolated PostgreSQL test container, applies migrations, ge
 | Total Node.js tests | 39 |
 | Separate migration regression assertion groups | 8 |
 
-At the time of this documentation update, Step 6's 36 Node.js tests were reported passing. Step 7's first run reported 13 passing unit tests; two missing filtering tests were identified for restoration. The final 39-test total and eight migration assertion groups remain acceptance targets until verified.
+On 25 November 2026, the corrective branch passed all 39 Node.js tests (15 unit, 17 data access integration and seven seed safety), with zero failures, skips or cancellations. All eight separate SQL migration assertion groups also passed. Prisma validation, migration status, ESLint, TypeScript and the production build completed successfully in the supplied local terminal output. Final GitHub verification is tracked in the [Sprint 07.5 Review](./sprint-07-5-review.md).
 
 ### Database safety
 
@@ -194,7 +194,7 @@ Integration tests currently rely on predefined development fixtures. They verify
 
 ## Database Migration Regression Testing
 
-Run the Sprint 07.5 regression suite after implementing its files:
+Run the implemented Sprint 07.5 regression suite:
 
 ```bash
 npm run test:migrations

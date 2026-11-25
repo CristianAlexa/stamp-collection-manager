@@ -4,7 +4,7 @@
 
 **Project:** Stamp Collection Manager v3.0  
 **Sprint:** 07.5 — Database Refinement  
-**Status:** Migration review completed (Step 5 confirmed); automated regression suite validation and final sprint merge pending.  
+**Status:** Migration review completed; regression suite and corrective-branch quality checks passed locally. Original database changes merged in PR #27; corrective application merge pending.  
 **Database:** PostgreSQL 16 / Prisma 7
 
 The refined architecture contains 23 Prisma models, six enums and nine migrations. Sprint 07.5 is an intermediate refinement sprint; the Week 24 MVP and Week 36 production release milestones remain unchanged.
@@ -77,16 +77,18 @@ Linked colour names are transferred into nullable text fields; multiple names ar
 | Fresh database deployment and schema comparison | Passed — developer confirmed |
 | Prisma schema validation and migration drift check | Passed — terminal output supplied |
 | Step 6 integration and seed safety tests | 24/24 passed — developer confirmed |
-| Step 7 historical regression suite | Pending execution confirmation |
-| Final sprint quality checks and merge | Pending |
+| Step 7 historical regression suite | All eight assertion groups passed — local terminal output supplied |
+| Final corrective-branch quality checks | All eight checks passed — local terminal output supplied |
+| Original database refinement merge | [PR #27](https://github.com/CristianAlexa/stamp-collection-manager/pull/27), `60fd877` — verified on GitHub |
+| Corrective application merge | Pending |
 
-### Planned repeatable historical regression suite (Step 7)
+### Repeatable historical regression suite (Step 7)
 
 `npm run test:migrations` reconstructs the first six migrations in a temporary database inside the test container, inserts historical fixtures, applies the three refinement migrations and checks eight assertion groups. It validates data transformation SQL independently from Prisma migration bookkeeping.
 
 The fixtures cover eight denomination scenarios (including missing and whitespace-only denominations), multiple linked colours, absent and explicit variant colour overrides, country metadata, obsolete tables and columns, currency relationships and the expected 23-table baseline.
 
-The runner should remove its temporary database on exit. Confirm actual execution and cleanup before recording Step 7 as passed.
+The 25 November 2026 regression run completed all eight assertion groups successfully and reached temporary database cleanup without reporting an error. The developer previously confirmed the database retention and backup checks. The runner does not replace a restore verification.
 
 ## 8. Local Recovery Resources
 
@@ -115,4 +117,4 @@ Review which archives and temporary databases exist locally before cleanup. Keep
 
 ## 10. Conclusion
 
-The corrected ninth migration and reconciled development database passed Step 5, as confirmed by the developer. Step 7 adds repeatable protection against the historical denomination and colour data-loss scenarios. Final regression execution, documentation review and merge remain subject to the outstanding sprint acceptance checks.
+The corrected ninth migration and reconciled development database passed Step 5, as confirmed by the developer. Step 7 provides repeatable protection against the historical denomination and colour data-loss scenarios; all eight SQL assertion groups passed locally. PR #27 published the database changes on 24 November 2026. The missing application commit has since been recovered and tested locally. Final corrective merge and repository sign-off remain pending. The published migrations must not be rewritten.
