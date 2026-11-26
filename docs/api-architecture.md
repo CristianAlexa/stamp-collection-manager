@@ -53,7 +53,7 @@ Shared response types are defined in:
 |---|---|---|
 | GET | /api/stamps | Implemented |
 | GET | /api/stamps/:id | Implemented |
-| POST | /api/stamps | Planned |
+| POST | /api/stamps | Implemented — development only |
 | PATCH | /api/stamps/:id | Planned |
 | DELETE | /api/stamps/:id | Planned |
 
@@ -105,6 +105,58 @@ The endpoint is covered by database integration tests
 for successful retrieval, variation colour inheritance,
 missing records, invalid identifiers and nullable fields.
 
+### 5.2 Catalogue Stamp Creation
+
+POST /api/stamps
+
+Creates a shared catalogue stamp and its optional
+international catalogue references.
+
+Request validation is defined in:
+
+`src/lib/stamp-mutation-schema.ts`
+
+The application-facing data access function is:
+
+`createCatalogueStamp()`
+
+Country and catalogue definitions must already exist.
+
+Catalogue numbers are represented as strings and
+preserve their case. Catalogue codes are normalised
+to uppercase.
+
+Stamp creation and catalogue reference creation
+execute within a single Prisma transaction.
+
+Any failed operation rolls back the entire creation.
+
+Successful requests return HTTP 201, the complete
+StampDetail DTO and a Location response header.
+
+| HTTP Status | Error code |
+|---|---|
+| 201 | Resource created |
+| 400 | INVALID_CONTENT_TYPE |
+| 400 | INVALID_JSON |
+| 400 | INVALID_STAMP_DATA |
+| 400 | COUNTRY_NOT_FOUND |
+| 400 | CATALOGUE_NOT_FOUND |
+| 403 | MUTATIONS_DISABLED |
+| 409 | DUPLICATE_CATALOGUE_REFERENCE |
+| 409 | RELATION_CONFLICT |
+| 500 | DATABASE_ERROR |
+
+The initial creation interface supports core catalogue
+fields and multiple catalogue references.
+
+Additional catalogue characteristics will be introduced
+incrementally.
+
+Unknown optional values remain null. Newly created
+stamps use UNKNOWN for unconfirmed watermark status.
+
+
 
 ## 6. Validation and Error Handling
 
@@ -127,6 +179,26 @@ be exposed to a network or deployed to production.
 Catalogue records are shared reference data.
 Personal collections and albums require user-scoped access.
 
+
+### Development Mutation Guard
+
+Unauthenticated catalogue editing is temporarily
+restricted by catalogueMutationsAllowed().
+
+The guard requires:
+
+- Development or test environment.
+- ALLOW_DEV_MUTATIONS=true.
+- An approved local PostgreSQL database.
+
+Development servers must bind to the loopback address.
+
+Production mutations remain disabled until proper
+authentication and authorisation are implemented.
+
+This guard is not a replacement for user authentication.
+
+
 ## 8. Testing
 
 API response utilities are covered by automated unit tests.
@@ -134,9 +206,22 @@ API response utilities are covered by automated unit tests.
 Catalogue endpoints will receive additional integration
 tests during Sprint 08.
 
+
+Catalogue creation tests use unique temporary fixture
+markers and clean up created catalogue references
+and stamps after each test.
+
+Integration test files execute sequentially to avoid
+interference between CRUD tests and seeded read tests.
+
+The development database is not used by automated
+CRUD integration tests.
+
+
 ## 9. Review History
 
 | Sprint | Changes |
 |---|---|
 | Week 08, Day 1 | Established API response standards |
 | Week 08, Day 2 | Implemented catalogue detail API and DTO |
+| Week 08, Day 3 | Catalogue creation, transaction handling and mutation guard |

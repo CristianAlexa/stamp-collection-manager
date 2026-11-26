@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import type { Stamp } from "@/types/stamp";
 import type { StampDetail } from "@/types/stamp-detail";
 import { getEffectiveStampColour } from "@/lib/stamp-colour";
+import type { Prisma } from "@/generated/prisma/client";
+import type { CreateStampInput } from "@/lib/stamp-mutation-schema";
 
 /**
  * Retrieves shared catalogue stamps.
@@ -111,8 +113,11 @@ export async function getCatalogueStamps(): Promise<Stamp[]> {
  *
  * Returns null if the stamp does not exist.
  */
-export async function getCatalogueStampById(stampId: string) {
-  return prisma.stamp.findUnique({
+export async function getCatalogueStampById(
+  stampId: string,
+  db: Prisma.TransactionClient = prisma,
+) {
+  return db.stamp.findUnique({
     where: {
       id: stampId,
     },
@@ -157,8 +162,9 @@ export async function getCatalogueStampById(stampId: string) {
  */
 export async function getCatalogueStampDetail(
   stampId: string,
+  db: Prisma.TransactionClient = prisma,
 ): Promise<StampDetail | null> {
-  const record = await getCatalogueStampById(stampId);
+  const record = await getCatalogueStampById(stampId, db);
 
   if (!record) {
     return null;
@@ -264,4 +270,136 @@ export async function getCatalogueStampDetail(
       })),
     })),
   };
+}
+
+
+/**
+ * Represents an expected catalogue relationship error.
+ */
+export class CatalogueWriteError extends Error {
+  constructor(
+    public readonly code:
+      | "COUNTRY_NOT_FOUND"
+      | "CATALOGUE_NOT_FOUND",
+    message: string,
+  ) {
+    super(message);
+    this.name = "CatalogueWriteError";
+  }
+}
+
+/**
+ * Creates a catalogue stamp and its references
+ * within one atomic database transaction.
+ */
+export async function createCatalogueStamp(
+  input: CreateStampInput,
+): Promise<StampDetail> {
+  return prisma.$transaction(async (tx) => {
+    // Validate the issuing country.
+    const country = await tx.country.findUnique({
+      where: {
+        id: input.countryId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!country) {
+      throw new CatalogueWriteError(
+        "COUNTRY_NOT_FOUND",
+        "The selected country does not exist.",
+      );
+    }
+
+    // Retrieve the requested catalogue definitions.
+    const catalogues = await tx.catalogue.findMany({
+      where: {
+        code: {
+          in: input.catalogueReferences.map(
+            (reference) => reference.catalogueCode,
+          ),
+        },
+      },
+      select: {
+        id: true,
+        code: true,
+      },
+    });
+
+    const catalogueIds = new Map(
+      catalogues.map((catalogue) => [
+        catalogue.code,
+        catalogue.id,
+      ]),
+    );
+
+    // Validate and prepare catalogue references.
+    const references = input.catalogueReferences.map(
+      (reference) => {
+        const catalogueId = catalogueIds.get(
+          reference.catalogueCode,
+        );
+
+        if (!catalogueId) {
+          throw new CatalogueWriteError(
+            "CATALOGUE_NOT_FOUND",
+            `Catalogue ${reference.catalogueCode} does not exist.`,
+          );
+        }
+
+        return {
+          catalogueId,
+          catalogueNumber: reference.catalogueNumber,
+        };
+      },
+    );
+
+    // Create the shared catalogue stamp.
+    const stamp = await tx.stamp.create({
+      data: {
+        name: input.name ?? null,
+        description: input.description ?? null,
+        countryId: country.id,
+        year: input.year,
+        faceValue: input.faceValue ?? null,
+        colour: input.colour ?? null,
+
+        // Do not assume an unknown watermark is absent.
+        watermarkStatus: "UNKNOWN",
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    // Create all requested catalogue references.
+    if (references.length > 0) {
+      await tx.catalogueReference.createMany({
+        data: references.map((reference) => ({
+          stampId: stamp.id,
+          countryId: country.id,
+          catalogueId: reference.catalogueId,
+          catalogueNumber:
+            reference.catalogueNumber,
+        })),
+      });
+    }
+
+    // Retrieve the complete application-facing DTO
+    // using the same transaction.
+    const detail = await getCatalogueStampDetail(
+      stamp.id,
+      tx,
+    );
+
+    if (!detail) {
+      throw new Error(
+        "Could not retrieve the newly created stamp.",
+      );
+    }
+
+    return detail;
+  });
 }

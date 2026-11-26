@@ -8,6 +8,7 @@ export DATABASE_URL="postgresql://stamp_test:stamp_test_only@127.0.0.1:5434/stam
 
 export NODE_ENV=test
 export ALLOW_DEV_SEED=true
+export ALLOW_DEV_MUTATIONS=true
 
 echo "Starting isolated PostgreSQL test database..."
 
@@ -27,9 +28,13 @@ npx prisma db seed
 
 echo "Running database integration tests..."
 
+
 node --conditions=react-server \
   --import tsx \
+  --test-concurrency=1 \
   --test tests/integration/data-access.test.ts \
+  tests/integration/catalogue-create.test.ts \
   tests/integration/seed-safety.test.ts
+
 
 echo "Integration testing completed."
