@@ -2,10 +2,15 @@
 import {
   getCatalogueStampDetail,
   updateCatalogueStamp,
+  deleteCatalogueStamp,
   CatalogueWriteError,
 } from "@/lib/data/stamps";
 import { stampIdSchema } from "@/lib/stamp-query-schema";
-import { apiSuccess, apiError } from "@/lib/api/responses";
+import {
+  apiSuccess,
+  apiError,
+  apiNoContent,
+} from "@/lib/api/responses";
 import { Prisma } from "@/generated/prisma/client";
 import { updateStampSchema } from "@/lib/stamp-mutation-schema";
 import { catalogueMutationsAllowed } from "@/lib/api/mutation-guard";
@@ -210,6 +215,92 @@ export async function PATCH(
     return apiError(
       "DATABASE_ERROR",
       "Could not update the stamp. Try again later.",
+      500,
+    );
+  }
+}
+
+/**
+ * DELETE /api/stamps/:id
+ *
+ * Safely deletes an unprotected catalogue stamp.
+ */
+export async function DELETE(
+  _request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  // Catalogue mutations remain development-only.
+  if (!catalogueMutationsAllowed()) {
+    return apiError(
+      "MUTATIONS_DISABLED",
+      "Catalogue editing is currently disabled.",
+      403,
+    );
+  }
+
+  // Validate the internal stamp identifier.
+  const { id } = await context.params;
+
+  const idResult = stampIdSchema.safeParse(id);
+
+  if (!idResult.success) {
+    return apiError(
+      "INVALID_STAMP_ID",
+      "Enter a valid stamp identifier.",
+      400,
+    );
+  }
+
+  try {
+    await deleteCatalogueStamp(idResult.data);
+
+    return apiNoContent();
+  } catch (error: unknown) {
+    // Expected business errors.
+    if (error instanceof CatalogueWriteError) {
+      return apiError(
+        error.code,
+        error.message,
+        error.code === "STAMP_NOT_FOUND"
+          ? 404
+          : 409,
+      );
+    }
+
+    // Database-level integrity protection.
+    if (
+      error instanceof
+      Prisma.PrismaClientKnownRequestError
+    ) {
+      if (
+        error.code === "P2003" ||
+        error.code === "P2025"
+      ) {
+        return apiError(
+          "RELATION_CONFLICT",
+          "The catalogue record or its dependencies have changed.",
+          409,
+        );
+      }
+
+      if (error.code === "P2034") {
+        return apiError(
+          "WRITE_CONFLICT",
+          "A concurrent operation occurred. Please retry.",
+          409,
+        );
+      }
+    }
+
+    // Unexpected errors remain in server logs.
+    console.error(
+      "Could not delete the catalogue stamp.",
+      error,
+    );
+
+    return apiError(
+      "DATABASE_ERROR",
+      "Could not delete the stamp. Try again later.",
       500,
     );
   }

@@ -277,6 +277,7 @@ export async function getCatalogueStampDetail(
  * Represents an expected catalogue relationship error.
  */
 
+
 /**
  * Represents an expected catalogue write error.
  */
@@ -287,13 +288,18 @@ export class CatalogueWriteError extends Error {
       | "CATALOGUE_NOT_FOUND"
       | "STAMP_NOT_FOUND"
       | "CATALOGUE_REFERENCE_IN_USE"
-      | "INVALID_ISSUE_DATE",
+      | "INVALID_ISSUE_DATE"
+      | "STAMP_IN_COLLECTION"
+      | "STAMP_HAS_VARIANTS"
+      | "STAMP_HAS_IMAGES"
+      | "STAMP_HAS_VALUATIONS",
     message: string,
   ) {
     super(message);
     this.name = "CatalogueWriteError";
   }
 }
+
 
 
 /**
@@ -371,9 +377,9 @@ export async function createCatalogueStamp(
     }
 
     const references = await resolveCatalogueReferences(
-  tx,
-  input.catalogueReferences,
-);
+      tx,
+      input.catalogueReferences,
+    );
 
     // Create the shared catalogue stamp.
     const stamp = await tx.stamp.create({
@@ -579,6 +585,117 @@ export async function updateCatalogueStamp(
       }
 
       return detail;
+    },
+    {
+      isolationLevel: "Serializable",
+    },
+  );
+}
+
+
+/**
+ * Safely deletes a shared catalogue stamp.
+ *
+ * Personal collections, historical valuations,
+ * variations and images must remain protected.
+ */
+export async function deleteCatalogueStamp(
+  stampId: string,
+): Promise<void> {
+  await prisma.$transaction(
+    async (tx) => {
+      // Check whether the stamp exists and
+      // identify protected direct dependencies.
+      const stamp = await tx.stamp.findUnique({
+        where: {
+          id: stampId,
+        },
+        select: {
+          id: true,
+          _count: {
+            select: {
+              collectionItems: true,
+              variants: true,
+              images: true,
+            },
+          },
+        },
+      });
+
+      if (!stamp) {
+        throw new CatalogueWriteError(
+          "STAMP_NOT_FOUND",
+          "The requested stamp does not exist.",
+        );
+      }
+
+      // Protect personal collections.
+      if (stamp._count.collectionItems > 0) {
+        throw new CatalogueWriteError(
+          "STAMP_IN_COLLECTION",
+          "This stamp belongs to a personal collection and cannot be deleted.",
+        );
+      }
+
+      // Protect explicit stamp variations.
+      if (stamp._count.variants > 0) {
+        throw new CatalogueWriteError(
+          "STAMP_HAS_VARIANTS",
+          "This stamp has variations and cannot be deleted.",
+        );
+      }
+
+      // Protect shared catalogue images.
+      if (stamp._count.images > 0) {
+        throw new CatalogueWriteError(
+          "STAMP_HAS_IMAGES",
+          "This stamp has catalogue images and cannot be deleted.",
+        );
+      }
+
+      // Protect historical valuations associated
+      // with any of the stamp's catalogue references.
+      const valuedReference =
+        await tx.catalogueReference.findFirst({
+          where: {
+            stampId: stamp.id,
+            valuations: {
+              some: {},
+            },
+          },
+          select: {
+            id: true,
+          },
+        });
+
+      if (valuedReference) {
+        throw new CatalogueWriteError(
+          "STAMP_HAS_VALUATIONS",
+          "This stamp has historical catalogue valuations and cannot be deleted.",
+        );
+      }
+
+      // Remove theme associations only.
+      await tx.stampTheme.deleteMany({
+        where: {
+          stampId: stamp.id,
+        },
+      });
+
+      // Remove catalogue references that have
+      // no dependent historical valuations.
+      await tx.catalogueReference.deleteMany({
+        where: {
+          stampId: stamp.id,
+        },
+      });
+
+      // Delete the shared catalogue record.
+      await tx.stamp.delete({
+        where: {
+          id: stamp.id,
+        },
+      });
     },
     {
       isolationLevel: "Serializable",

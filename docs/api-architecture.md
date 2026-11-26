@@ -49,13 +49,15 @@ Shared response types are defined in:
 
 ## 5. Catalogue Endpoints
 
+
 | Method | Endpoint | Status |
 |---|---|---|
 | GET | /api/stamps | Implemented |
 | GET | /api/stamps/:id | Implemented |
 | POST | /api/stamps | Implemented — development only |
 | PATCH | /api/stamps/:id | Implemented — development only |
-| DELETE | /api/stamps/:id | Planned |
+| DELETE | /api/stamps/:id | Implemented — development only |
+
 
 
 ### 5.1 Catalogue Stamp Detail
@@ -224,6 +226,79 @@ Authentication and authorisation are required before
 production catalogue editing can be enabled.
 
 
+### 5.4 Catalogue Stamp Deletion
+
+DELETE /api/stamps/:id
+
+Safely deletes an existing shared catalogue stamp.
+
+The application-facing data access function is:
+
+`deleteCatalogueStamp()`
+
+#### Protected dependencies
+
+Deletion is prohibited when the stamp has:
+
+- Personal collection items.
+- Stamp variations.
+- Catalogue images.
+- Historical catalogue valuations.
+
+The endpoint does not support forced deletion.
+
+#### Removable associations
+
+When no protected dependencies exist, deletion removes:
+
+- Stamp-to-theme associations.
+- Unused catalogue references.
+- The catalogue stamp itself.
+
+Reusable country, catalogue, theme, currency,
+watermark, perforation, series and stamp type
+definitions remain unchanged.
+
+#### Transaction handling
+
+Dependency checks and deletion operations execute
+within a Serializable Prisma transaction.
+
+Restrictive PostgreSQL foreign keys provide
+additional database-level integrity protection.
+
+Any failed operation rolls back the transaction.
+
+Successful deletion returns HTTP 204 with an
+empty response body.
+
+| HTTP Status | Error code |
+|---|---|
+| 204 | Successful deletion |
+| 400 | INVALID_STAMP_ID |
+| 403 | MUTATIONS_DISABLED |
+| 404 | STAMP_NOT_FOUND |
+| 409 | STAMP_IN_COLLECTION |
+| 409 | STAMP_HAS_VARIANTS |
+| 409 | STAMP_HAS_IMAGES |
+| 409 | STAMP_HAS_VALUATIONS |
+| 409 | RELATION_CONFLICT |
+| 409 | WRITE_CONFLICT |
+| 500 | DATABASE_ERROR |
+
+#### Security and limitations
+
+The endpoint performs permanent deletion, not
+archiving or soft deletion.
+
+The development mutation guard remains mandatory.
+
+Production catalogue deletion requires proper
+authentication and authorisation.
+
+Forced deletion is intentionally unsupported.
+
+
 ## 6. Validation and Error Handling
 
 Incoming data must be validated before database mutations.
@@ -292,6 +367,33 @@ historical valuation protection, transaction rollback,
 issue date consistency and mutation restrictions.
 
 
+### Catalogue Deletion Testing
+
+Catalogue deletion tests use isolated temporary
+stamp and catalogue edition identifiers.
+
+The ten automated tests cover:
+
+- Successful deletion with HTTP 204.
+- Removal of unused catalogue references.
+- Removal of stamp-to-theme associations.
+- Preservation of reusable definitions.
+- Invalid and unknown stamp identifiers.
+- Personal collection and image protection.
+- Stamp variation protection.
+- Catalogue image protection.
+- Historical valuation protection.
+- Mutation permission restrictions.
+- Database-level transaction rollback.
+
+Fixture cleanup removes only records belonging
+to the test suite, in dependency-safe order.
+
+All 60 integration and seed safety tests passed
+in two consecutive executions, confirming test
+repeatability.
+
+
 ## 9. Review History
 
 | Sprint | Changes |
@@ -300,3 +402,4 @@ issue date consistency and mutation restrictions.
 | Week 08, Day 2 | Implemented catalogue detail API and DTO |
 | Week 08, Day 3 | Catalogue creation, transaction handling and mutation guard |
 | Week 08, Day 4 | Transactional catalogue updates and historical valuation protection |
+| Week 08, Day 5 | Safe catalogue deletion and dependency protection |
