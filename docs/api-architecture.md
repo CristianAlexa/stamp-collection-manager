@@ -52,10 +52,59 @@ Shared response types are defined in:
 | Method | Endpoint | Status |
 |---|---|---|
 | GET | /api/stamps | Implemented |
-| GET | /api/stamps/:id | Planned |
+| GET | /api/stamps/:id | Implemented |
 | POST | /api/stamps | Planned |
 | PATCH | /api/stamps/:id | Planned |
 | DELETE | /api/stamps/:id | Planned |
+
+
+### 5.1 Catalogue Stamp Detail
+
+GET /api/stamps/:id
+
+Returns detailed information about one shared
+catalogue stamp.
+
+The StampDetail DTO is defined in:
+
+`src/types/stamp-detail.ts`
+
+The application-facing data access function is:
+
+`getCatalogueStampDetail()`
+
+It reuses the existing getCatalogueStampById()
+relational database query.
+
+The response includes:
+
+- Stamp identification and issue date
+- Issuing country information
+- Printed face value and catalogue colour
+- Physical dimensions
+- Stamp classification
+- Watermark and perforation information
+- Structured catalogue references
+- Variations and variation attributes
+- Effective inherited variation colours
+
+Decimal measurements are represented as strings.
+Missing optional characteristics are represented as null.
+
+Personal collection data, private images, purchase
+prices and internal timestamps are excluded.
+
+| HTTP Status | Error code |
+|---|---|
+| 200 | Successful response |
+| 400 | INVALID_STAMP_ID |
+| 404 | STAMP_NOT_FOUND |
+| 500 | DATABASE_ERROR |
+
+The endpoint is covered by database integration tests
+for successful retrieval, variation colour inheritance,
+missing records, invalid identifiers and nullable fields.
+
 
 ## 6. Validation and Error Handling
 
@@ -90,3 +139,4 @@ tests during Sprint 08.
 | Sprint | Changes |
 |---|---|
 | Week 08, Day 1 | Established API response standards |
+| Week 08, Day 2 | Implemented catalogue detail API and DTO |

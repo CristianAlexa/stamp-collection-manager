@@ -2,6 +2,8 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import type { Stamp } from "@/types/stamp";
+import type { StampDetail } from "@/types/stamp-detail";
+import { getEffectiveStampColour } from "@/lib/stamp-colour";
 
 /**
  * Retrieves shared catalogue stamps.
@@ -144,4 +146,122 @@ export async function getCatalogueStampById(stampId: string) {
       },
     },
   });
+}
+
+
+/**
+ * Returns a JSON-compatible catalogue stamp detail DTO.
+ *
+ * Reuses the existing relational database query.
+ * Returns null when the catalogue stamp does not exist.
+ */
+export async function getCatalogueStampDetail(
+  stampId: string,
+): Promise<StampDetail | null> {
+  const record = await getCatalogueStampById(stampId);
+
+  if (!record) {
+    return null;
+  }
+
+  const catalogueReferences = record.catalogueReferences
+    .map((reference) => ({
+      catalogueCode: reference.catalogue.code,
+      catalogueName: reference.catalogue.name,
+      catalogueNumber: reference.catalogueNumber,
+      reference:
+        `${reference.catalogue.code}-` +
+        `${record.country.code ?? record.country.name}-` +
+        `${reference.catalogueNumber}`,
+    }))
+    .sort((a, b) =>
+      a.catalogueCode.localeCompare(b.catalogueCode),
+    );
+
+  // Preserve the existing preferred-name behaviour.
+  const preferredReference =
+    catalogueReferences.find(
+      (reference) => reference.catalogueCode === "SG",
+    ) ?? catalogueReferences[0];
+
+  return {
+    id: record.id,
+
+    name:
+      record.name ??
+      preferredReference?.reference ??
+      "Unidentified stamp",
+
+    description: record.description,
+
+    year: record.year,
+    issueMonth: record.issueMonth,
+    issueDay: record.issueDay,
+
+    country: {
+      id: record.country.id,
+      name: record.country.name,
+      code: record.country.code,
+      flagUrl: record.country.flagUrl,
+      description: record.country.description,
+    },
+
+    faceValue: record.faceValue,
+    colour: record.colour,
+
+    widthMm: record.widthMm?.toString() ?? null,
+    heightMm: record.heightMm?.toString() ?? null,
+
+    stampType: record.stampType
+      ? {
+          id: record.stampType.id,
+          name: record.stampType.name,
+        }
+      : null,
+
+    watermarkStatus: record.watermarkStatus,
+    watermarkOrientation: record.watermarkOrientation,
+
+    watermark: record.watermark
+      ? {
+          id: record.watermark.id,
+          name: record.watermark.name,
+          description: record.watermark.description,
+          imageUrl: record.watermark.imageUrl,
+        }
+      : null,
+
+    perforationType: record.perforationType,
+
+    perforation: record.perforation
+      ? {
+          id: record.perforation.id,
+          name: record.perforation.name,
+          horizontal:
+            record.perforation.horizontal?.toString() ?? null,
+          vertical:
+            record.perforation.vertical?.toString() ?? null,
+        }
+      : null,
+
+    catalogueReferences,
+
+    variants: record.variants.map((variant) => ({
+      id: variant.id,
+      name: variant.name,
+      description: variant.description,
+
+      colour: variant.colour,
+
+      effectiveColour: getEffectiveStampColour(
+        record.colour,
+        variant.colour,
+      ),
+
+      attributes: variant.attributes.map((attribute) => ({
+        type: attribute.value.variationType.name,
+        value: attribute.value.value,
+      })),
+    })),
+  };
 }

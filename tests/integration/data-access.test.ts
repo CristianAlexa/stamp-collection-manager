@@ -21,6 +21,14 @@ import {
   getCollectionStatistics,
 } from "../../src/lib/data/collections";
 
+import { GET as getStampDetailRoute } from "../../src/app/api/stamps/[id]/route";
+
+import type { StampDetail } from "../../src/types/stamp-detail";
+import type {
+  ApiSuccessResponse,
+  ApiErrorResponse,
+} from "../../src/types/api";
+
 // Refuse to run integration tests against another database.
 const databaseUrl = new URL(
   process.env.DATABASE_URL ?? "",
@@ -316,4 +324,140 @@ test("preserves financial currency relationships", async () => {
     assert.ok("faceValue" in item.stamp);
     assert.ok("colour" in item.stamp);
   }
+});
+
+
+test("catalogue detail API returns a stamp and its variations", async () => {
+  const request = new Request(
+    "http://localhost/api/stamps/stamp-004",
+  );
+
+  const response = await getStampDetailRoute(
+    request,
+    {
+      params: Promise.resolve({
+        id: "stamp-004",
+      }),
+    },
+  );
+
+  assert.equal(response.status, 200);
+
+  const body: ApiSuccessResponse<StampDetail> =
+    await response.json();
+
+  const stamp = body.data;
+
+  assert.equal(stamp.id, "stamp-004");
+  assert.equal(stamp.year, 1864);
+  assert.equal(stamp.country.name, "Great Britain");
+
+  assert.equal(stamp.faceValue, "1d");
+  assert.equal(stamp.colour, "Rose Red");
+
+  assert.ok(stamp.catalogueReferences.length > 0);
+  assert.equal(stamp.variants.length, 2);
+
+  assert.deepEqual(
+    stamp.variants.map((variant) => variant.name),
+    ["Plate 71", "Plate 72"],
+  );
+
+  assert.deepEqual(
+    stamp.variants.map((variant) =>
+      variant.attributes.find(
+        (attribute) => attribute.type === "Plate Number",
+      )?.value,
+    ),
+    ["71", "72"],
+  );
+
+  for (const variant of stamp.variants) {
+    assert.equal(variant.colour, null);
+    assert.equal(variant.effectiveColour, "Rose Red");
+  }
+
+  // Internal and personal fields must not be exposed.
+  assert.equal("createdAt" in stamp, false);
+  assert.equal("updatedAt" in stamp, false);
+  assert.equal("collectionItems" in stamp, false);
+});
+
+
+test("catalogue detail API returns 404 for an unknown stamp", async () => {
+  const request = new Request(
+    "http://localhost/api/stamps/nonexistent-stamp",
+  );
+
+  const response = await getStampDetailRoute(
+    request,
+    {
+      params: Promise.resolve({
+        id: "nonexistent-stamp",
+      }),
+    },
+  );
+
+  assert.equal(response.status, 404);
+
+  const body: ApiErrorResponse =
+    await response.json();
+
+  assert.deepEqual(body, {
+    error: {
+      code: "STAMP_NOT_FOUND",
+      message: "The requested stamp does not exist.",
+    },
+  });
+});
+
+test("catalogue detail API returns 400 for an invalid identifier", async () => {
+  const request = new Request(
+    "http://localhost/api/stamps/stamp@004",
+  );
+
+  const response = await getStampDetailRoute(
+    request,
+    {
+      params: Promise.resolve({
+        id: "stamp@004",
+      }),
+    },
+  );
+
+  assert.equal(response.status, 400);
+
+  const body: ApiErrorResponse =
+    await response.json();
+
+  assert.deepEqual(body, {
+    error: {
+      code: "INVALID_STAMP_ID",
+      message: "Enter a valid stamp identifier.",
+    },
+  });
+});
+
+test("catalogue detail API preserves missing optional characteristics", async () => {
+  const request = new Request(
+    "http://localhost/api/stamps/stamp-003",
+  );
+
+  const response = await getStampDetailRoute(
+    request,
+    {
+      params: Promise.resolve({
+        id: "stamp-003",
+      }),
+    },
+  );
+
+  assert.equal(response.status, 200);
+
+  const body: ApiSuccessResponse<StampDetail> =
+    await response.json();
+
+  assert.equal(body.data.id, "stamp-003");
+  assert.equal(body.data.faceValue, null);
+  assert.equal(body.data.colour, null);
 });
