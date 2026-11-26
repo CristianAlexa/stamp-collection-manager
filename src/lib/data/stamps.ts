@@ -5,7 +5,7 @@ import type { Stamp } from "@/types/stamp";
 import type { StampDetail } from "@/types/stamp-detail";
 import { getEffectiveStampColour } from "@/lib/stamp-colour";
 import type { Prisma } from "@/generated/prisma/client";
-import type { CreateStampInput } from "@/lib/stamp-mutation-schema";
+import type { CreateStampInput, UpdateStampInput } from "@/lib/stamp-mutation-schema";
 
 /**
  * Retrieves shared catalogue stamps.
@@ -276,17 +276,74 @@ export async function getCatalogueStampDetail(
 /**
  * Represents an expected catalogue relationship error.
  */
+
+/**
+ * Represents an expected catalogue write error.
+ */
 export class CatalogueWriteError extends Error {
   constructor(
     public readonly code:
       | "COUNTRY_NOT_FOUND"
-      | "CATALOGUE_NOT_FOUND",
+      | "CATALOGUE_NOT_FOUND"
+      | "STAMP_NOT_FOUND"
+      | "CATALOGUE_REFERENCE_IN_USE"
+      | "INVALID_ISSUE_DATE",
     message: string,
   ) {
     super(message);
     this.name = "CatalogueWriteError";
   }
 }
+
+
+/**
+ * Resolves catalogue codes into database IDs.
+ */
+async function resolveCatalogueReferences(
+  tx: Prisma.TransactionClient,
+  input: CreateStampInput["catalogueReferences"],
+) {
+  const catalogues = await tx.catalogue.findMany({
+    where: {
+      code: {
+        in: input.map(
+          (reference) => reference.catalogueCode,
+        ),
+      },
+    },
+    select: {
+      id: true,
+      code: true,
+    },
+  });
+
+  const catalogueIds = new Map(
+    catalogues.map((catalogue) => [
+      catalogue.code,
+      catalogue.id,
+    ]),
+  );
+
+  return input.map((reference) => {
+    const catalogueId = catalogueIds.get(
+      reference.catalogueCode,
+    );
+
+    if (!catalogueId) {
+      throw new CatalogueWriteError(
+        "CATALOGUE_NOT_FOUND",
+        `Catalogue ${reference.catalogueCode} does not exist.`,
+      );
+    }
+
+    return {
+      catalogueId,
+      catalogueNumber: reference.catalogueNumber,
+    };
+  });
+}
+
+
 
 /**
  * Creates a catalogue stamp and its references
@@ -313,48 +370,10 @@ export async function createCatalogueStamp(
       );
     }
 
-    // Retrieve the requested catalogue definitions.
-    const catalogues = await tx.catalogue.findMany({
-      where: {
-        code: {
-          in: input.catalogueReferences.map(
-            (reference) => reference.catalogueCode,
-          ),
-        },
-      },
-      select: {
-        id: true,
-        code: true,
-      },
-    });
-
-    const catalogueIds = new Map(
-      catalogues.map((catalogue) => [
-        catalogue.code,
-        catalogue.id,
-      ]),
-    );
-
-    // Validate and prepare catalogue references.
-    const references = input.catalogueReferences.map(
-      (reference) => {
-        const catalogueId = catalogueIds.get(
-          reference.catalogueCode,
-        );
-
-        if (!catalogueId) {
-          throw new CatalogueWriteError(
-            "CATALOGUE_NOT_FOUND",
-            `Catalogue ${reference.catalogueCode} does not exist.`,
-          );
-        }
-
-        return {
-          catalogueId,
-          catalogueNumber: reference.catalogueNumber,
-        };
-      },
-    );
+    const references = await resolveCatalogueReferences(
+  tx,
+  input.catalogueReferences,
+);
 
     // Create the shared catalogue stamp.
     const stamp = await tx.stamp.create({
@@ -402,4 +421,167 @@ export async function createCatalogueStamp(
 
     return detail;
   });
+}
+
+/**
+ * Partially updates a shared catalogue stamp.
+ *
+ * Existing catalogue reference IDs are preserved.
+ * References with historical valuations cannot
+ * be renumbered.
+ */
+export async function updateCatalogueStamp(
+  stampId: string,
+  input: UpdateStampInput,
+): Promise<StampDetail> {
+  return prisma.$transaction(
+    async (tx) => {
+      const stamp = await tx.stamp.findUnique({
+        where: {
+          id: stampId,
+        },
+        select: {
+          id: true,
+          countryId: true,
+          issueMonth: true,
+          issueDay: true,
+        },
+      });
+
+      if (!stamp) {
+        throw new CatalogueWriteError(
+          "STAMP_NOT_FOUND",
+          "The requested stamp does not exist.",
+        );
+      }
+
+      // Protect an existing leap-day issue date.
+      if (
+        input.year !== undefined &&
+        stamp.issueMonth === 2 &&
+        stamp.issueDay === 29
+      ) {
+        const isLeapYear =
+          input.year % 4 === 0 &&
+          (
+            input.year % 100 !== 0 ||
+            input.year % 400 === 0
+          );
+
+        if (!isLeapYear) {
+          throw new CatalogueWriteError(
+            "INVALID_ISSUE_DATE",
+            "The new year is incompatible with the existing issue date.",
+          );
+        }
+      }
+
+      // Separate scalar fields from relationships.
+      const {
+        catalogueReferences,
+        ...fields
+      } = input;
+
+      // Update only fields supplied by the client.
+      if (Object.keys(fields).length > 0) {
+        await tx.stamp.update({
+          where: {
+            id: stamp.id,
+          },
+          data: fields,
+        });
+      }
+
+      // Add or update supplied references.
+      if (catalogueReferences !== undefined) {
+        const references =
+          await resolveCatalogueReferences(
+            tx,
+            catalogueReferences,
+          );
+
+        for (const reference of references) {
+          const existing =
+            await tx.catalogueReference.findUnique({
+              where: {
+                stampId_catalogueId: {
+                  stampId: stamp.id,
+                  catalogueId:
+                    reference.catalogueId,
+                },
+              },
+              select: {
+                id: true,
+                catalogueNumber: true,
+                _count: {
+                  select: {
+                    valuations: true,
+                  },
+                },
+              },
+            });
+
+          // Add a new reference.
+          if (!existing) {
+            await tx.catalogueReference.create({
+              data: {
+                stampId: stamp.id,
+                countryId: stamp.countryId,
+                catalogueId:
+                  reference.catalogueId,
+                catalogueNumber:
+                  reference.catalogueNumber,
+              },
+            });
+
+            continue;
+          }
+
+          // No change is necessary.
+          if (
+            existing.catalogueNumber ===
+            reference.catalogueNumber
+          ) {
+            continue;
+          }
+
+          // Protect historical catalogue valuations.
+          if (existing._count.valuations > 0) {
+            throw new CatalogueWriteError(
+              "CATALOGUE_REFERENCE_IN_USE",
+              "A catalogue reference with historical valuations cannot be renumbered.",
+            );
+          }
+
+          // Correct the number without changing its ID.
+          await tx.catalogueReference.update({
+            where: {
+              id: existing.id,
+            },
+            data: {
+              catalogueNumber:
+                reference.catalogueNumber,
+            },
+          });
+        }
+      }
+
+      // Return the complete updated DTO.
+      const detail = await getCatalogueStampDetail(
+        stamp.id,
+        tx,
+      );
+
+      if (!detail) {
+        throw new Error(
+          "Could not retrieve the updated stamp.",
+        );
+      }
+
+      return detail;
+    },
+    {
+      isolationLevel: "Serializable",
+    },
+  );
 }

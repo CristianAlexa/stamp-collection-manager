@@ -34,6 +34,7 @@ node --conditions=react-server \
   --test-concurrency=1 \
   --test tests/integration/data-access.test.ts \
   tests/integration/catalogue-create.test.ts \
+  tests/integration/catalogue-update.test.ts \
   tests/integration/seed-safety.test.ts
 
 

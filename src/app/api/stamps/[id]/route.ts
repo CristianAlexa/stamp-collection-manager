@@ -1,7 +1,14 @@
 
-import { getCatalogueStampDetail } from "@/lib/data/stamps";
+import {
+  getCatalogueStampDetail,
+  updateCatalogueStamp,
+  CatalogueWriteError,
+} from "@/lib/data/stamps";
 import { stampIdSchema } from "@/lib/stamp-query-schema";
 import { apiSuccess, apiError } from "@/lib/api/responses";
+import { Prisma } from "@/generated/prisma/client";
+import { updateStampSchema } from "@/lib/stamp-mutation-schema";
+import { catalogueMutationsAllowed } from "@/lib/api/mutation-guard";
 
 export const runtime = "nodejs";
 
@@ -56,6 +63,153 @@ export async function GET(
     return apiError(
       "DATABASE_ERROR",
       "Could not load the stamp. Try again later.",
+      500,
+    );
+  }
+}
+
+
+/**
+ * PATCH /api/stamps/:id
+ *
+ * Partially updates a shared catalogue stamp.
+ */
+export async function PATCH(
+  request: Request,
+  context: RouteContext,
+): Promise<Response> {
+  if (!catalogueMutationsAllowed()) {
+    return apiError(
+      "MUTATIONS_DISABLED",
+      "Catalogue editing is currently disabled.",
+      403,
+    );
+  }
+
+  // Validate the internal stamp identifier.
+  const { id } = await context.params;
+
+  const idResult = stampIdSchema.safeParse(id);
+
+  if (!idResult.success) {
+    return apiError(
+      "INVALID_STAMP_ID",
+      "Enter a valid stamp identifier.",
+      400,
+    );
+  }
+
+  // Require a JSON request body.
+  const contentType = request.headers
+    .get("content-type")
+    ?.split(";")[0]
+    .trim()
+    .toLowerCase();
+
+  if (contentType !== "application/json") {
+    return apiError(
+      "INVALID_CONTENT_TYPE",
+      "Send the request as application/json.",
+      400,
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return apiError(
+      "INVALID_JSON",
+      "The request body must contain valid JSON.",
+      400,
+    );
+  }
+
+  const result = updateStampSchema.safeParse(body);
+
+  if (!result.success) {
+    return apiError(
+      "INVALID_STAMP_DATA",
+      "The supplied stamp data is invalid.",
+      400,
+    );
+  }
+
+  try {
+    const stamp = await updateCatalogueStamp(
+      idResult.data,
+      result.data,
+    );
+
+    return apiSuccess(stamp);
+  } catch (error: unknown) {
+    if (error instanceof CatalogueWriteError) {
+      if (error.code === "STAMP_NOT_FOUND") {
+        return apiError(
+          error.code,
+          error.message,
+          404,
+        );
+      }
+
+      if (
+        error.code === "CATALOGUE_REFERENCE_IN_USE"
+      ) {
+        return apiError(
+          error.code,
+          error.message,
+          409,
+        );
+      }
+
+      return apiError(
+        error.code,
+        error.message,
+        400,
+      );
+    }
+
+    if (
+      error instanceof
+      Prisma.PrismaClientKnownRequestError
+    ) {
+      if (error.code === "P2002") {
+        return apiError(
+          "DUPLICATE_CATALOGUE_REFERENCE",
+          "A catalogue record or reference already exists.",
+          409,
+        );
+      }
+
+      if (
+        error.code === "P2003" ||
+        error.code === "P2025"
+      ) {
+        return apiError(
+          "RELATION_CONFLICT",
+          "A related catalogue record has changed.",
+          409,
+        );
+      }
+
+      if (error.code === "P2034") {
+        return apiError(
+          "WRITE_CONFLICT",
+          "A concurrent update occurred. Please retry.",
+          409,
+        );
+      }
+    }
+
+    console.error(
+      "Could not update the catalogue stamp.",
+      error,
+    );
+
+    return apiError(
+      "DATABASE_ERROR",
+      "Could not update the stamp. Try again later.",
       500,
     );
   }

@@ -54,7 +54,7 @@ Shared response types are defined in:
 | GET | /api/stamps | Implemented |
 | GET | /api/stamps/:id | Implemented |
 | POST | /api/stamps | Implemented — development only |
-| PATCH | /api/stamps/:id | Planned |
+| PATCH | /api/stamps/:id | Implemented — development only |
 | DELETE | /api/stamps/:id | Planned |
 
 
@@ -157,6 +157,72 @@ Unknown optional values remain null. Newly created
 stamps use UNKNOWN for unconfirmed watermark status.
 
 
+### 5.3 Catalogue Stamp Updates
+
+PATCH /api/stamps/:id
+
+Partially updates an existing shared catalogue stamp.
+
+Request validation is provided by updateStampSchema
+in src/lib/stamp-mutation-schema.ts.
+
+The application-facing data access function is
+updateCatalogueStamp().
+
+#### Partial update behaviour
+
+- Omitted fields remain unchanged.
+- Nullable fields can be cleared using null.
+- Empty update requests are rejected.
+- The internal stamp ID and country are immutable.
+- Existing issue dates must remain valid.
+
+#### Catalogue reference behaviour
+
+Submitted catalogue references are added or updated.
+Omitted references remain unchanged.
+
+Existing reference IDs are preserved when correcting
+catalogue numbers.
+
+References associated with historical valuations
+cannot be renumbered through this endpoint.
+
+Reference removal and country reassignment require
+dedicated future workflows.
+
+#### Transaction handling
+
+Updates execute within a Serializable Prisma transaction.
+
+Conflicting updates roll back the entire transaction,
+including scalar and catalogue reference changes.
+
+Successful requests return HTTP 200 and the complete
+StampDetail DTO.
+
+| HTTP Status | Error code |
+|---|---|
+| 200 | Successful update |
+| 400 | INVALID_STAMP_ID |
+| 400 | INVALID_CONTENT_TYPE |
+| 400 | INVALID_JSON |
+| 400 | INVALID_STAMP_DATA |
+| 400 | INVALID_ISSUE_DATE |
+| 400 | CATALOGUE_NOT_FOUND |
+| 403 | MUTATIONS_DISABLED |
+| 404 | STAMP_NOT_FOUND |
+| 409 | DUPLICATE_CATALOGUE_REFERENCE |
+| 409 | CATALOGUE_REFERENCE_IN_USE |
+| 409 | RELATION_CONFLICT |
+| 409 | WRITE_CONFLICT |
+| 500 | DATABASE_ERROR |
+
+The development mutation guard remains mandatory.
+
+Authentication and authorisation are required before
+production catalogue editing can be enabled.
+
 
 ## 6. Validation and Error Handling
 
@@ -217,6 +283,14 @@ interference between CRUD tests and seeded read tests.
 The development database is not used by automated
 CRUD integration tests.
 
+Catalogue update tests track temporary stamp and
+catalogue edition IDs for targeted fixture cleanup.
+
+Tests cover partial updates, nullable characteristics,
+immutable fields, catalogue reference preservation,
+historical valuation protection, transaction rollback,
+issue date consistency and mutation restrictions.
+
 
 ## 9. Review History
 
@@ -225,3 +299,4 @@ CRUD integration tests.
 | Week 08, Day 1 | Established API response standards |
 | Week 08, Day 2 | Implemented catalogue detail API and DTO |
 | Week 08, Day 3 | Catalogue creation, transaction handling and mutation guard |
+| Week 08, Day 4 | Transactional catalogue updates and historical valuation protection |
